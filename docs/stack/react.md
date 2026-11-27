@@ -81,6 +81,9 @@ src/
         ├── hooks/               # 훅 샘플 페이지
         ├── layout/              # 레이아웃 샘플 페이지
         └── pageFeatures/        # 페이지 기능 샘플 페이지
+
+tools/                           # 빌드에 들어가지 않는 작업 도구·자료
+└── renderlint-rules/            # 화면 검수 체크리스트 (RULES.md, 에이전트 공용)
 ```
 
 **퍼블리싱 페이지 자동 라우팅**

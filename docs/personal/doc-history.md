@@ -41,6 +41,7 @@
 | 11-25 | 요청 방식에 따라 결과 품질 차이가 큼 | 세션 회고와 프롬프트 작성법 정리 | `prompt-guide.md` |
 | 11-25 | 탭 제목이 템플릿 이름(`Publish Template`)으로 나옴 | 프로젝트 이름으로 변경, Phase 1 완료 | `tasks.md` 1-5 |
 | 11-25 | 문서 변화를 발표·회고에서 보여 줄 기록이 없음 | 이 문서 작성 | `doc-history.md` |
+| 11-27 | 화면 검수 기준이 없고, 내부망(인터넷 없음)의 다른 에이전트도 같은 기준을 써야 함 | renderlint v0.2.0 규칙 58개를 한국어 문서로 추출(판정 수치 포함, MIT 고지), `tools/` 폴더 추가 → 같은 날 WCAG·Core Web Vitals·`AGENTS.md` 기준의 자체 체크리스트(A~H 55항목, 자체 코드·예외 표기)로 새로 쓰고 LICENSE 삭제 | `tools/renderlint-rules/RULES.md`, `stack/react.md` 3장 |
 
 ## 4. 리허설 기록
 
