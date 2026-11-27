@@ -9,11 +9,11 @@
 
 ### 1. 도구 테스트
 
-- [ ] mobile-agent-testers
+- [ ] ~~mobile-agent-testers~~ — 11-27 패스: 모바일 환경 체크 불필요
 - [x] safe-anything — 11-27 실행 (v1.1.0, 결과 아래)
 - [x] renderlint — 11-27 실행 (v0.2.0, init 없이 단발 실행, 결과 아래)
-- [ ] openQodex
-- [ ] rederive
+- [ ] ~~openQodex~~ — 11-27 패스: 비슷한 검증을 이미 하고 있음 (`/code-review`, safe-anything, 화면 검수 도구). Windows 공식 지원도 없음
+- [ ] ~~rederive~~ — 11-27 패스: 이 프로젝트와 맞지 않음 (복사본에서 `rdv init --dry-run`까지만 확인)
 
 > **조사 결과 (설치 안 함, 웹 README 기준)**
 >
@@ -21,9 +21,9 @@
 > | --- | --- | --- | --- | --- |
 > | safe-anything | erkamyaman/safe-anything | 보안·시크릿·의존성·Claude 설정 스캔, 키 불필요 | 지원 | 높음 |
 > | renderlint | ngocanhnckh/renderlint (npm `@yitec/renderlint`) | 실제 브라우저로 화면 넘침·겹침·대비·반응형 검사 | README에 없음 | 높음 |
-> | mobile-agent-testers | pierridotite/mobile-agent-testers | GitHub Actions 에뮬레이터에서 Claude가 앱 QA, 유료 | setup.ps1 있음 | 낮음 |
-> | openQodex | openqodex/openqodex | 푸시 전 로컬 코드 리뷰 | 미지원(macOS·Linux) | 지금은 불가 |
-> | rederive | 후보 2개 (rederive/rederive, EricJujianZou/rederive) | A: 함수 동작 잠금 / B: 코드 이해 학습 스킬 | A: 부분 | 낮음, 어느 쪽인지 확인 필요 |
+> | ~~mobile-agent-testers~~ | ~~pierridotite/mobile-agent-testers~~ | ~~GitHub Actions 에뮬레이터에서 Claude가 앱 QA, 유료~~ | ~~setup.ps1 있음~~ | ~~낮음~~ → 패스 (모바일 환경 체크 불필요) |
+> | ~~openQodex~~ | ~~openqodex/openqodex~~ | ~~푸시 전 로컬 코드 리뷰~~ | ~~미지원(macOS·Linux)~~ | ~~지금은 불가~~ → 패스 (비슷한 검증 이미 하는 중) |
+> | ~~rederive~~ | ~~후보 2개 (rederive/rederive, EricJujianZou/rederive)~~ | ~~A: 함수 동작 잠금 / B: 코드 이해 학습 스킬~~ | ~~A: 부분~~ | ~~낮음, 어느 쪽인지 확인 필요~~ → 패스 (이 프로젝트와 맞지 않음) |
 >
 > - renderlint의 init, rederive의 init은 CLAUDE.md·AGENTS.md·package.json을 고칠 수 있음 → init 없이 단발 실행으로 시험
 > - 복사본 저장소가 여럿 있으니 원본만 사용
