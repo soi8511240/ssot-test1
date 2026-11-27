@@ -23,7 +23,8 @@ type DatePickerProps = Omit<
   React.ComponentPropsWithoutRef<"button">,
   "defaultValue" | "onChange" | "value"
 > & {
-  value?: Date;
+  /** 제어형 값. 값이 없는 제어형은 null을 넘깁니다. (undefined = 비제어형) */
+  value?: Date | null;
   defaultValue?: Date;
   onValueChange?: (value: Date | undefined) => void;
   /**
@@ -151,7 +152,7 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
     const isControlled = value !== undefined;
     const [open, setOpen] = React.useState(false);
     const [internalValue, setInternalValue] = React.useState(defaultValue);
-    const selectedDate = isControlled ? value : internalValue;
+    const selectedDate = isControlled ? (value ?? undefined) : internalValue;
 
     const displayValue = selectedDate
       ? format(selectedDate, formatString, { locale: ko })
@@ -270,7 +271,8 @@ type DateRangePickerProps = Omit<
   React.ComponentPropsWithoutRef<"button">,
   "defaultValue" | "onChange" | "value"
 > & {
-  value?: DateRange;
+  /** 제어형 값. 값이 없는 제어형은 null을 넘깁니다. (undefined = 비제어형) */
+  value?: DateRange | null;
   defaultValue?: DateRange;
   onValueChange?: (value: DateRange | undefined) => void;
   placeholder?: string;
@@ -321,7 +323,7 @@ const DateRangePicker = React.forwardRef<
     const [internalValue, setInternalValue] = React.useState<
       DateRange | undefined
     >(defaultValue);
-    const committedRange = isControlled ? value : internalValue;
+    const committedRange = isControlled ? (value ?? undefined) : internalValue;
 
     // 선택 중인 임시 값 (달력에만 반영, 적용 전까지 외부 미전달)
     const [pendingRange, setPendingRange] = React.useState<
@@ -452,7 +454,8 @@ type DateRangeTwoPickersProps = Omit<
   React.ComponentPropsWithoutRef<"div">,
   "children" | "value" | "defaultValue"
 > & {
-  value?: DateRange;
+  /** 제어형 값. 값이 없는 제어형은 null을 넘깁니다. (undefined = 비제어형) */
+  value?: DateRange | null;
   defaultValue?: DateRange;
   onValueChange?: (value: DateRange | undefined) => void;
   /** 시작일 placeholder */
@@ -528,7 +531,7 @@ function DateRangePickerTwoPickers({
     defaultValue
   );
 
-  const committed = isControlled ? value : internalRange;
+  const committed = isControlled ? (value ?? undefined) : internalRange;
 
   const handleFromChange = React.useCallback(
     (nextFrom: Date | undefined) => {

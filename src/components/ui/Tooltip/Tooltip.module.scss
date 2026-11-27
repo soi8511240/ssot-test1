@@ -49,12 +49,12 @@
   }
 
   &.variantWarning {
-    background: var(--red);
+    background: var(--yellow);
     color: var(--font-w);
   }
 
   &.variantError {
-    background: var(--yellow);
+    background: var(--red);
     color: var(--font-w);
   }
 
@@ -127,19 +127,19 @@
   }
 
   .variantWarning & {
-    fill: var(--warning);
+    fill: var(--yellow);
   }
 
   .variantError & {
-    fill: var(--error);
+    fill: var(--red);
   }
 
   .variantSuccess & {
-    fill: var(--success);
+    fill: var(--primary);
   }
 
   .variantInfo & {
-    fill: var(--info);
+    fill: var(--font-b);
   }
 }
 

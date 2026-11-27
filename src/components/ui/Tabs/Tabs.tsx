@@ -17,6 +17,17 @@ const TabsValueContext = React.createContext<string>("");
 // TabsContent 내부 컴포넌트가 자신의 탭이 활성화됐는지 알기 위한 Context
 const TabActiveContext = React.createContext<boolean>(false);
 
+// TabsList·TabsTrigger가 자기 Tabs의 variant/type/size를 data 속성으로 받기 위한 Context
+// (자손 선택자로 스타일을 주면 Tabs 안에 Tabs를 넣었을 때 바깥 스타일이 안쪽에 번집니다)
+type TabsStyleContextValue = {
+  variant: string;
+  type?: string;
+  size?: string;
+};
+const TabsStyleContext = React.createContext<TabsStyleContextValue>({
+  variant: "default",
+});
+
 /** TabsContent 내부에서 현재 탭이 활성화됐는지 여부를 반환하는 훅 */
 function useTabActive(): boolean {
   return React.useContext(TabActiveContext);
@@ -97,6 +108,11 @@ function Tabs({
     [scrollSpy, valueProp, onValueChange],
   );
 
+  const styleContextValue = React.useMemo(
+    () => ({ variant: variant ?? "default", type, size }),
+    [variant, type, size],
+  );
+
   const rootProps = scrollSpy
     ? {
         value: scrollSpyActive,
@@ -110,18 +126,20 @@ function Tabs({
 
   return (
     <TabsValueContext.Provider value={activeValue}>
-      <TabsPrimitive.Root
-        data-slot="tabs"
-        data-scroll-spy={scrollSpy ? "true" : undefined}
-        data-orientation={orientation}
-        data-variant={variant}
-        data-type={type}
-        data-size={size}
-        orientation={orientation}
-        className={cn(tabsVariants({ variant, type, size }), className)}
-        {...props}
-        {...rootProps}
-      />
+      <TabsStyleContext.Provider value={styleContextValue}>
+        <TabsPrimitive.Root
+          data-slot="tabs"
+          data-scroll-spy={scrollSpy ? "true" : undefined}
+          data-orientation={orientation}
+          data-variant={variant}
+          data-type={type}
+          data-size={size}
+          orientation={orientation}
+          className={cn(tabsVariants({ variant, type, size }), className)}
+          {...props}
+          {...rootProps}
+        />
+      </TabsStyleContext.Provider>
     </TabsValueContext.Provider>
   );
 }
@@ -129,9 +147,13 @@ function Tabs({
 type TabsListProps = React.ComponentProps<typeof TabsPrimitive.List>;
 
 function TabsList({ className, ...props }: TabsListProps) {
+  const { variant, type, size } = React.useContext(TabsStyleContext);
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
+      data-variant={variant}
+      data-type={type}
+      data-size={size}
       className={cn(styles.tabsList, className)}
       {...props}
     />
@@ -142,9 +164,12 @@ function TabsTrigger({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+  const { variant, size } = React.useContext(TabsStyleContext);
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
+      data-variant={variant}
+      data-size={size}
       className={cn(styles.tabsTrigger, className)}
       {...props}
     />

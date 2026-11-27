@@ -99,14 +99,17 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         const el = internalRef.current;
         if (!el) return;
 
-        // controlled/uncontrolled 모두 리셋될 값을 먼저 반영한 뒤,
-        // React onChange는 input 이벤트에 반응하므로 이벤트를 디스패치합니다.
-        el.value = resetValue;
+        // el.value = ... 로 넣으면 React가 값 변경을 감지하지 못해
+        // 제어형 input에서 onChange가 호출되지 않습니다.
+        // 브라우저 기본 setter로 값을 넣은 뒤 input 이벤트를 보내야 onChange가 호출됩니다.
+        const nativeValueSetter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value"
+        )?.set;
+        nativeValueSetter?.call(el, resetValue);
         if (!isControlled) setUncontrolledValue(resetValue);
 
-        // React onChange는 input 이벤트에 반응합니다.
         el.dispatchEvent(new Event("input", { bubbles: true }));
-        el.dispatchEvent(new Event("change", { bubbles: true }));
         el.focus();
 
         onResetValue?.(resetValue);

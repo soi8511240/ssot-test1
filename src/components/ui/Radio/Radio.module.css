@@ -11,7 +11,9 @@
   cursor: pointer;
 }
 
-.radioFieldDisabled {
+.radioFieldDisabled,
+/* RadioGroup disabled일 때는 항목에만 data-disabled가 붙으므로 라벨 영역도 함께 처리 */
+.radioField:has([data-disabled]) {
   cursor: not-allowed;
 }
 

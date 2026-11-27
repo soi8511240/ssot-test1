@@ -69,6 +69,8 @@ function TreeView({
   defaultCheckedIds = [],
   onCheckedIdsChange,
   checkCascade = false,
+  enablePlaceholder = false,
+  dropTargetOffsetPx,
   indentPerDepthPx = 10,
   className,
   renderNode,
@@ -204,6 +206,20 @@ function TreeView({
       rootId={rootId as any}
       canDrag={dragEnabled ? undefined : () => false}
       onDrop={handleDrop}
+      dropTargetOffset={dropTargetOffsetPx}
+      // placeholder는 라이브러리 규칙상 정렬 끄기(sort=false)·폴더 우선 배치 끄기가 함께 필요합니다.
+      {...(enablePlaceholder
+        ? {
+            sort: false,
+            insertDroppableFirst: false,
+            placeholderRender: (_node: unknown, { depth }: { depth: number }) => (
+              <div
+                className="treeViewPlaceholder"
+                style={{ marginLeft: depth * indentPerDepthPx }}
+              />
+            ),
+          }
+        : {})}
       render={(node: any, ctx: any): ReactElement => {
         const typedCtx: TreeViewRenderContext = {
           depth: ctx.depth,

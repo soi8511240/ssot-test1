@@ -1,6 +1,6 @@
 # Input
 
-> 파일: `src/components/ui/Input/Input.tsx` (+ `Input.module.css`) · 가이드: `/guide/input`
+> 파일: `src/components/ui/Input/Input.tsx` (+ `Input.module.css`) · 가이드: `/guide/input` (Samples · Playground 탭)
 > 기준: 템플릿 코드 (2026-11-25). 규칙: `AGENTS.md` 5.1.1
 
 ```tsx
@@ -18,7 +18,7 @@ import {
 | --- | --- | --- | --- |
 | `value` / `onChange` | `string` / 이벤트 | — | 제어형으로 씁니다 (값은 부모 `useState`) |
 | `resetEnabled` | `boolean` | `false` | 값이 있을 때 지우기(×) 버튼 표시 |
-| `resetValue` | `string` | `""` | 지우기를 누르면 들어갈 값 |
+| `resetValue` | `string` | `""` | 지우기를 누르면 들어갈 값. 제어형이면 `onChange`도 이 값으로 호출됩니다 |
 | `onResetValue` | `(value) => void` | — | 지우기를 누른 뒤 호출 |
 | `resetLabel` | `string` | `"리셋"` | 지우기 버튼의 읽기 이름 (→ `"입력값 지우기"` 권장) |
 | 그 외 | `id`, `type`, `name`, `placeholder`, `disabled`, `readOnly`, `inputMode`, `maxLength`, `aria-*` 등 `<input>` 속성 | | 그대로 전달 |

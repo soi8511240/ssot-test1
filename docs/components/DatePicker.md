@@ -1,6 +1,6 @@
 # DatePicker
 
-> 파일: `src/components/ui/DatePicker/DatePicker.tsx` (+ `DatePicker.module.css`) · 가이드: `/guide/datepicker`
+> 파일: `src/components/ui/DatePicker/DatePicker.tsx` (+ `DatePicker.module.css`) · 가이드: `/guide/datepicker` (Samples · Playground 탭)
 > 기준: 템플릿 코드 (2026-11-25). 규칙: `AGENTS.md` 5.1.1
 
 ```tsx
@@ -22,7 +22,7 @@ import {
 
 | Props | 값 | 기본값 | 설명 |
 | --- | --- | --- | --- |
-| `value` / `onValueChange` | `Date` (기간은 `DateRange` = `{ from, to }`) | — | 제어형 (값은 부모 `useState`) |
+| `value` / `onValueChange` | `Date \| null` (기간은 `DateRange \| null`, `DateRange` = `{ from, to }`) | — | 제어형 (값은 부모 `useState`). 값이 없을 때는 `null`을 넘깁니다. `undefined`를 넘기면 비제어형으로 바뀌어 이전 값이 남습니다 |
 | `defaultValue` | 위와 같음 | — | 처음 값 (비제어형) |
 | `variant` | `default` · `btnType` | `default` | `btnType`은 달력 아이콘을 버튼 칸으로 분리한 모양 |
 | `formatString` | date-fns 형식 | `"yyyy.MM.dd"` | 화면에 보이는 날짜 형식 |

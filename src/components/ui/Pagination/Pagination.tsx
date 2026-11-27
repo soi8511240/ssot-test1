@@ -155,7 +155,7 @@ type PaginationProps = {
   /** 현재 활성 페이지 (1-based) */
   current: number;
   /**
-   * 표시할 최대 페이지 번호 버튼 수 (기본값 5).
+   * 표시할 최대 페이지 번호 버튼 수 (기본값 10).
    * ellipsis=false 일 때는 << / >> 점프 거리로만 사용됩니다.
    */
   max?: number;
