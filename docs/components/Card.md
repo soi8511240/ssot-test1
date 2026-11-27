@@ -1,6 +1,6 @@
 # Card
 
-> 파일: `src/components/ui/Card/Card.tsx` (+ `Card.module.css`) · 가이드: `/guide/card`
+> 파일: `src/components/ui/Card/Card.tsx` (+ `Card.module.css`) · 가이드: `/guide/card` (Samples · Playground 탭)
 > 기준: 템플릿 코드 (2026-11-25). 규칙: `AGENTS.md` 5.1.1
 
 ```tsx

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
   Button,
   POPOVER_PLACEMENTS,
@@ -8,14 +10,227 @@ import {
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
+  type PopoverPlacement,
 } from "@/components/ui";
 import { GuideBox } from "@/publish/guide/GuideBox";
+import {
+  GuidePlayground,
+  GuideSampleTabs,
+  PlaygroundRadioControl,
+  PlaygroundSwitchControl,
+  PlaygroundTextControl,
+  type GuidePlaygroundControl,
+} from "@/publish/guide/GuidePlayground";
+import { useGuideEventLog } from "@/publish/guide/useGuideEventLog";
+
+type PopoverSize = "sm" | "md" | "lg";
+
+const POPOVER_SIZES: PopoverSize[] = ["sm", "md", "lg"];
+const DEFAULT_PLACEMENT: PopoverPlacement = "bottom";
+const DEFAULT_SIZE: PopoverSize = "md";
+const DEFAULT_SIDE_OFFSET = "4";
+const DEFAULT_TITLE = "알림";
+
+/** 현재 컨트롤 값으로 사용 코드를 만듭니다. */
+function buildPlaygroundCode(
+  isModal: boolean,
+  placement: PopoverPlacement,
+  size: PopoverSize,
+  sideOffset: string,
+  title: string,
+) {
+  const modalProp = isModal ? " modal" : "";
+  const contentProps = [
+    placement !== DEFAULT_PLACEMENT ? ` placement="${placement}"` : "",
+    size !== DEFAULT_SIZE ? ` size="${size}"` : "",
+    sideOffset !== DEFAULT_SIDE_OFFSET && sideOffset !== ""
+      ? ` sideOffset={${Number(sideOffset)}}`
+      : "",
+  ].join("");
+
+  return `const [open, setOpen] = useState(false);
+
+<Popover open={open} onOpenChange={setOpen}${modalProp}>
+  <PopoverTrigger asChild>
+    <Button variant="outline" type="button">
+      열기
+    </Button>
+  </PopoverTrigger>
+  <PopoverContent${contentProps}>
+    <PopoverHeader>
+      <PopoverTitle>${title}</PopoverTitle>
+      <PopoverDescription>
+        Popover 본문입니다. 바깥을 클릭하면 닫힙니다.
+      </PopoverDescription>
+    </PopoverHeader>
+    <PopoverClose asChild>
+      <Button className="mt-4" size="sm" type="button">
+        닫기
+      </Button>
+    </PopoverClose>
+  </PopoverContent>
+</Popover>`;
+}
+
+/** Popover Playground (이 페이지에서만 사용) */
+function PopoverPlayground() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isModal, setIsModal] = useState(false);
+  const [placement, setPlacement] =
+    useState<PopoverPlacement>(DEFAULT_PLACEMENT);
+  const [size, setSize] = useState<PopoverSize>(DEFAULT_SIZE);
+  const [sideOffset, setSideOffset] = useState(DEFAULT_SIDE_OFFSET);
+  const [title, setTitle] = useState(DEFAULT_TITLE);
+  const { eventLogs, addEventLog, clearEventLogs } = useGuideEventLog();
+
+  const sideOffsetNumber = Number(sideOffset) || 0;
+
+  const handleChangePopoverOpen = (nextOpen: boolean) => {
+    setIsOpen(nextOpen);
+    addEventLog("onOpenChange", nextOpen);
+  };
+
+  const handleClickReset = () => {
+    setIsOpen(false);
+    setIsModal(false);
+    setPlacement(DEFAULT_PLACEMENT);
+    setSize(DEFAULT_SIZE);
+    setSideOffset(DEFAULT_SIDE_OFFSET);
+    setTitle(DEFAULT_TITLE);
+    clearEventLogs();
+  };
+
+  const controls: GuidePlaygroundControl[] = [
+    {
+      name: "open",
+      type: "boolean",
+      description: "열림 여부 (onOpenChange와 함께 제어형)",
+      control: (
+        <PlaygroundSwitchControl
+          label="open"
+          checked={isOpen}
+          onCheckedChange={setIsOpen}
+        />
+      ),
+    },
+    {
+      name: "modal",
+      type: "boolean",
+      description: "열려 있는 동안 바깥 요소와의 상호작용을 막고 포커스를 가둡니다.",
+      control: (
+        <PlaygroundSwitchControl
+          label="modal"
+          checked={isModal}
+          onCheckedChange={setIsModal}
+        />
+      ),
+    },
+    {
+      name: "PopoverContent placement",
+      type: "PopoverPlacement",
+      description: "트리거 기준 뜨는 방향·정렬 (side·align보다 우선)",
+      control: (
+        <PlaygroundRadioControl
+          label="placement"
+          value={placement}
+          options={[...POPOVER_PLACEMENTS]}
+          onValueChange={(next) => setPlacement(next as PopoverPlacement)}
+        />
+      ),
+    },
+    {
+      name: "PopoverContent size",
+      type: '"sm" | "md" | "lg"',
+      description: "패널 너비·안쪽 여백·글자 크기",
+      control: (
+        <PlaygroundRadioControl
+          label="size"
+          value={size}
+          options={POPOVER_SIZES}
+          onValueChange={(next) => setSize(next as PopoverSize)}
+        />
+      ),
+    },
+    {
+      name: "PopoverContent sideOffset",
+      type: "number",
+      description: "트리거와 패널 사이 거리(px). 기본 4",
+      control: (
+        <PlaygroundTextControl
+          label="sideOffset"
+          type="number"
+          value={sideOffset}
+          onValueChange={setSideOffset}
+        />
+      ),
+    },
+    {
+      name: "PopoverTitle children",
+      type: "ReactNode",
+      description: "패널 제목 텍스트",
+      control: (
+        <PlaygroundTextControl
+          label="PopoverTitle children"
+          value={title}
+          onValueChange={setTitle}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <GuidePlayground
+      description="Controls에서 Props를 바꾸면 미리보기와 코드가 바로 바뀝니다. 미리보기에서 열고 닫아도 Controls의 open이 함께 바뀝니다(제어형)."
+      code={buildPlaygroundCode(isModal, placement, size, sideOffset, title)}
+      controls={controls}
+      controlsNote="variant는 default 하나뿐이고 연결된 스타일이 없어 Controls에 넣지 않았습니다. container는 DOM 노드·셀렉터를 넘기는 값이라 Samples 탭의 Portal container 예시를 참고하세요."
+      state={{
+        open: isOpen,
+        modal: isModal,
+        placement,
+        size,
+        sideOffset: sideOffsetNumber,
+        title,
+      }}
+      eventLogs={eventLogs}
+      onReset={handleClickReset}
+    >
+      <div className="flex w-full justify-center p-6">
+        <Popover open={isOpen} onOpenChange={handleChangePopoverOpen} modal={isModal}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" type="button">
+              열기
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            placement={placement}
+            size={size}
+            sideOffset={sideOffsetNumber}
+          >
+            <PopoverHeader>
+              <PopoverTitle>{title}</PopoverTitle>
+              <PopoverDescription>
+                Popover 본문입니다. 바깥을 클릭하면 닫힙니다.
+              </PopoverDescription>
+            </PopoverHeader>
+            <PopoverClose asChild>
+              <Button className="mt-4" size="sm" type="button">
+                닫기
+              </Button>
+            </PopoverClose>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </GuidePlayground>
+  );
+}
 
 function SamplePopoverPage() {
   return (
     <div className="guide-layout">
       <h1 className="guide-title">Popover Samples</h1>
       <div className="guide-content">
+        <GuideSampleTabs playground={<PopoverPlayground />}>
         <GuideBox
           title="기본 Popover"
           description="트리거 클릭 시 열리는 플로팅 패널입니다. `container`를 생략하면 Portal을 쓰지 않고, `PopoverTrigger` 바로 다음 형제로 DOM에 붙습니다."
@@ -266,6 +481,7 @@ import {
             ))}
           </div>
         </GuideBox>
+        </GuideSampleTabs>
       </div>
     </div>
   );

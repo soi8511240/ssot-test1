@@ -57,6 +57,72 @@ export default function SampleButtonPage() {
 - 실제 구현을 확인해 작성하며, 존재하지 않는 Props·variant 예시를 만들지 않습니다.
 - variant·size는 값마다 실제 UI 예시를 보여 줍니다.
 
+### 2.1 Playground 탭 (Storybook 방식)
+
+Props를 눌러 바꿔 보고 상태값을 확인하는 탭입니다. `components` 섹션의 모든 샘플 페이지에 둡니다. 새 컴포넌트 샘플을 만들 때도 같은 작업에서 Playground를 함께 만듭니다.
+
+- 공통 파일: `src/publish/guide/GuidePlayground.tsx`, `src/publish/guide/useGuideEventLog.ts`
+- 화면 구성: `Samples`(기존 `GuideBox` 예시) / `Playground` 탭. Playground는 미리보기 + 사용 코드 → Controls 표 → State(현재 상태값·이벤트 로그) 순서입니다.
+
+```tsx
+import { GuidePlayground, GuideSampleTabs, PlaygroundRadioControl } from "@/publish/guide/GuidePlayground";
+import { useGuideEventLog } from "@/publish/guide/useGuideEventLog";
+
+function ButtonPlayground() {
+  const [variant, setVariant] = useState<"default" | "outline">("default");
+  const { eventLogs, addEventLog, clearEventLogs } = useGuideEventLog();
+
+  return (
+    <GuidePlayground
+      code={`<Button variant="${variant}">확인</Button>`}
+      controls={[
+        {
+          name: "variant",
+          type: '"default" | "outline"',
+          description: "버튼 모양",
+          control: (
+            <PlaygroundRadioControl label="variant" value={variant} options={["default", "outline"]} onValueChange={(next) => setVariant(next as "default" | "outline")} />
+          ),
+        },
+      ]}
+      state={{ variant }}
+      eventLogs={eventLogs}
+      onReset={() => { setVariant("default"); clearEventLogs(); }}
+    >
+      <Button variant={variant} onClick={() => addEventLog("onClick")}>확인</Button>
+    </GuidePlayground>
+  );
+}
+
+// 페이지: .guide-content 안에서 탭으로 감쌉니다.
+<div className="guide-content">
+  <GuideSampleTabs playground={<ButtonPlayground />}>
+    <GuideBox ...>...</GuideBox>
+  </GuideSampleTabs>
+</div>
+```
+
+| 요소 | 역할 | 주요 Props |
+| --- | --- | --- |
+| `GuideSampleTabs` | Samples / Playground 탭 (공통 `Tabs`, `type="line"`) | `playground`, `children`(Samples 내용), `defaultTab`(`"samples"`) |
+| `GuidePlayground` | 미리보기·코드·Controls·State 묶음 | `code`, `children`(미리보기), `controls`, `state`, `eventLogs`, `controlsNote`, `onReset`, `title`, `description` |
+| `PlaygroundRadioControl` | 값 하나 고르기 (variant, size, type) | `label`, `value`, `options`, `onValueChange`, `disabled` |
+| `PlaygroundSwitchControl` | boolean | `label`, `checked`, `onCheckedChange`, `disabled` |
+| `PlaygroundCheckboxControl` | 여러 값 고르기 (`string[]`, 항목별 disabled) | `label`, `value`, `options`, `onValueChange` |
+| `PlaygroundTextControl` | 글자·숫자 입력 (children 텍스트, placeholder, max) | `label`, `value`, `onValueChange`, `type`(`"text"`·`"number"`), `placeholder`, `disabled` |
+| `useGuideEventLog(max = 5)` | 이벤트 로그 (Storybook Actions) | `addEventLog(이름, ...인자)`, `clearEventLogs()`, `eventLogs` |
+
+**작성 규칙**
+
+- Playground 컴포넌트(`{Name}Playground`)는 해당 샘플 파일 안에 둡니다. 공통으로 쓰는 것은 위 공통 파일에만 추가합니다.
+- **제어형**으로 만듭니다. 미리보기 컴포넌트에 `value`/`checked` + `onValueChange`를 연결해, 미리보기를 조작해도 Controls와 State가 함께 바뀌게 합니다.
+- 컴포넌트의 이벤트(`onValueChange`, `onClick` 등)는 `addEventLog`로 기록합니다.
+- `code`는 현재 컨트롤 값으로 만든 실제 사용 코드여야 합니다.
+- Controls에는 **실제로 동작하는 Props만** 넣습니다. 스타일이 연결되지 않은 variant처럼 넣지 않은 Props가 있으면 `controlsNote`에 이유를 적습니다. (`docs/components/{이름}.md` 기준)
+- Controls 입력은 `Playground*Control`을 우선 쓰고, 맞는 것이 없을 때만 공통 컴포넌트로 직접 구성합니다.
+- `초기화`(`onReset`)는 모든 컨트롤과 이벤트 로그를 처음 값으로 되돌립니다.
+- Modal·Popover·Tooltip·Toast 같은 오버레이는 열기 버튼 + 오버레이를 미리보기로 두고, 가능하면 `open`을 제어하고 열림·닫힘 이벤트를 기록합니다.
+
 ## 3. 새 샘플 등록 절차
 
 1. 샘플 페이지 파일을 만듭니다.

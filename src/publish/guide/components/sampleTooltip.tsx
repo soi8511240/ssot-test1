@@ -7,6 +7,327 @@ import {
   TooltipTrigger,
 } from "@/components/ui";
 import { GuideBox } from "@/publish/guide/GuideBox";
+import {
+  GuidePlayground,
+  GuideSampleTabs,
+  PlaygroundRadioControl,
+  PlaygroundSwitchControl,
+  PlaygroundTextControl,
+  type GuidePlaygroundControl,
+} from "@/publish/guide/GuidePlayground";
+import { useGuideEventLog } from "@/publish/guide/useGuideEventLog";
+
+type TooltipVariant =
+  | "default"
+  | "light"
+  | "dark"
+  | "warning"
+  | "error"
+  | "success"
+  | "info";
+type TooltipSize = "sm" | "md" | "lg";
+type TooltipSide = "top" | "right" | "bottom" | "left";
+type TooltipAlign = "start" | "center" | "end";
+
+const TOOLTIP_VARIANTS: TooltipVariant[] = [
+  "default",
+  "light",
+  "dark",
+  "warning",
+  "error",
+  "success",
+  "info",
+];
+const DEFAULT_TOOLTIP_TEXT = "이것은 툴팁입니다.";
+const DEFAULT_DELAY_DURATION = "100";
+
+type TooltipPlaygroundValues = {
+  isOpen: boolean;
+  isClickMode: boolean;
+  delayDuration: string;
+  variant: TooltipVariant;
+  size: TooltipSize;
+  hasArrow: boolean;
+  side: TooltipSide;
+  align: TooltipAlign;
+  hasCloseButton: boolean;
+  text: string;
+};
+
+/** 현재 컨트롤 값으로 사용 코드를 만듭니다. */
+function buildTooltipPlaygroundCode(values: TooltipPlaygroundValues) {
+  const rootProps = [
+    "open={open}",
+    "onOpenChange={setOpen}",
+    values.isClickMode ? "clickMode" : "",
+    values.delayDuration !== DEFAULT_DELAY_DURATION
+      ? `delayDuration={${values.delayDuration}}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const contentProps = [
+    values.variant !== "default" ? `variant="${values.variant}"` : "",
+    values.size !== "md" ? `size="${values.size}"` : "",
+    values.hasArrow ? "arrow" : "",
+    values.side !== "top" ? `side="${values.side}"` : "",
+    values.align !== "center" ? `align="${values.align}"` : "",
+    values.hasCloseButton ? "showCloseButton" : "",
+    values.hasCloseButton ? "onClose={() => setOpen(false)}" : "",
+  ].filter(Boolean);
+
+  const contentOpen =
+    contentProps.length > 0
+      ? `<TooltipContent\n      ${contentProps.join("\n      ")}\n    >`
+      : "<TooltipContent>";
+
+  return `const [open, setOpen] = useState(${values.isOpen});
+
+<TooltipProvider>
+  <Tooltip ${rootProps}>
+    <TooltipTrigger asChild>
+      <Button type="button">툴팁이 보이는 버튼</Button>
+    </TooltipTrigger>
+    ${contentOpen}
+      <p>${values.text}</p>
+    </TooltipContent>
+  </Tooltip>
+</TooltipProvider>`;
+}
+
+/** Tooltip Playground (이 페이지에서만 사용) */
+function TooltipPlayground() {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [isClickMode, setIsClickMode] = React.useState(false);
+  const [delayDuration, setDelayDuration] = React.useState(
+    DEFAULT_DELAY_DURATION,
+  );
+  const [variant, setVariant] = React.useState<TooltipVariant>("default");
+  const [size, setSize] = React.useState<TooltipSize>("md");
+  const [hasArrow, setHasArrow] = React.useState(false);
+  const [side, setSide] = React.useState<TooltipSide>("top");
+  const [align, setAlign] = React.useState<TooltipAlign>("center");
+  const [hasCloseButton, setHasCloseButton] = React.useState(false);
+  const [text, setText] = React.useState(DEFAULT_TOOLTIP_TEXT);
+  const { eventLogs, addEventLog, clearEventLogs } = useGuideEventLog();
+
+  const handleChangeTooltipOpen = (nextOpen: boolean) => {
+    setIsOpen(nextOpen);
+    addEventLog("onOpenChange", nextOpen);
+  };
+
+  const handleCloseTooltip = () => {
+    setIsOpen(false);
+    addEventLog("onClose");
+  };
+
+  const handleClickReset = () => {
+    setIsOpen(false);
+    setIsClickMode(false);
+    setDelayDuration(DEFAULT_DELAY_DURATION);
+    setVariant("default");
+    setSize("md");
+    setHasArrow(false);
+    setSide("top");
+    setAlign("center");
+    setHasCloseButton(false);
+    setText(DEFAULT_TOOLTIP_TEXT);
+    clearEventLogs();
+  };
+
+  const controls: GuidePlaygroundControl[] = [
+    {
+      name: "open",
+      type: "boolean",
+      description: "열림 상태 (onOpenChange와 함께 제어형)",
+      control: (
+        <PlaygroundSwitchControl
+          label="open"
+          checked={isOpen}
+          onCheckedChange={setIsOpen}
+        />
+      ),
+    },
+    {
+      name: "clickMode",
+      type: "boolean",
+      description:
+        "hover로 열리지 않고 클릭·Enter·Space로 토글 (바깥 클릭·Esc로 닫힘)",
+      control: (
+        <PlaygroundSwitchControl
+          label="clickMode"
+          checked={isClickMode}
+          onCheckedChange={setIsClickMode}
+        />
+      ),
+    },
+    {
+      name: "delayDuration",
+      type: "number",
+      description: "hover 후 열리기까지 시간(ms). clickMode에서는 쓰지 않습니다.",
+      control: (
+        <PlaygroundRadioControl
+          label="delayDuration"
+          value={delayDuration}
+          options={[
+            "0",
+            { value: DEFAULT_DELAY_DURATION, label: "100 (기본)" },
+            "700",
+          ]}
+          onValueChange={setDelayDuration}
+          disabled={isClickMode}
+        />
+      ),
+    },
+    {
+      name: "TooltipContent variant",
+      type: TOOLTIP_VARIANTS.map((item) => `"${item}"`).join(" | "),
+      description: "툴팁 색 구성",
+      control: (
+        <PlaygroundRadioControl
+          label="TooltipContent variant"
+          value={variant}
+          options={TOOLTIP_VARIANTS}
+          onValueChange={(next) => setVariant(next as TooltipVariant)}
+        />
+      ),
+    },
+    {
+      name: "TooltipContent size",
+      type: '"sm" | "md" | "lg"',
+      description: "글자 크기·여백",
+      control: (
+        <PlaygroundRadioControl
+          label="TooltipContent size"
+          value={size}
+          options={["sm", "md", "lg"]}
+          onValueChange={(next) => setSize(next as TooltipSize)}
+        />
+      ),
+    },
+    {
+      name: "TooltipContent arrow",
+      type: "boolean",
+      description: "트리거를 가리키는 화살표",
+      control: (
+        <PlaygroundSwitchControl
+          label="TooltipContent arrow"
+          checked={hasArrow}
+          onCheckedChange={setHasArrow}
+        />
+      ),
+    },
+    {
+      name: "TooltipContent side",
+      type: '"top" | "right" | "bottom" | "left"',
+      description: "트리거 기준 표시 방향 (공간이 없으면 반대쪽으로 바뀔 수 있음)",
+      control: (
+        <PlaygroundRadioControl
+          label="TooltipContent side"
+          value={side}
+          options={["top", "right", "bottom", "left"]}
+          onValueChange={(next) => setSide(next as TooltipSide)}
+        />
+      ),
+    },
+    {
+      name: "TooltipContent align",
+      type: '"start" | "center" | "end"',
+      description: "side 방향에서의 정렬",
+      control: (
+        <PlaygroundRadioControl
+          label="TooltipContent align"
+          value={align}
+          options={["start", "center", "end"]}
+          onValueChange={(next) => setAlign(next as TooltipAlign)}
+        />
+      ),
+    },
+    {
+      name: "TooltipContent showCloseButton",
+      type: "boolean",
+      description: "닫기(×) 버튼 표시. 누르면 onClose가 호출됩니다.",
+      control: (
+        <PlaygroundSwitchControl
+          label="TooltipContent showCloseButton"
+          checked={hasCloseButton}
+          onCheckedChange={setHasCloseButton}
+        />
+      ),
+    },
+    {
+      name: "children",
+      type: "ReactNode",
+      description: "툴팁 내용",
+      control: (
+        <PlaygroundTextControl
+          label="children"
+          value={text}
+          onValueChange={setText}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <GuidePlayground
+      description="Controls에서 Props를 바꾸면 미리보기와 코드가 바로 바뀝니다. 버튼에 포인터를 올리거나(clickMode면 클릭) 열고 닫으면 Controls의 open이 함께 바뀝니다(제어형)."
+      code={buildTooltipPlaygroundCode({
+        isOpen,
+        isClickMode,
+        delayDuration,
+        variant,
+        size,
+        hasArrow,
+        side,
+        align,
+        hasCloseButton,
+        text,
+      })}
+      controls={controls}
+      controlsNote="TooltipProvider의 delay variant는 감싸는 div에 transition-delay 클래스만 붙고 툴팁 열림 시간에는 영향이 없어 넣지 않았습니다(열림 시간은 delayDuration). portal·container·sideOffset은 배치용 옵션이라 제외했습니다."
+      state={{
+        open: isOpen,
+        clickMode: isClickMode,
+        delayDuration: isClickMode ? "(clickMode에서는 미사용)" : Number(delayDuration),
+        variant,
+        size,
+        arrow: hasArrow,
+        side,
+        align,
+        showCloseButton: hasCloseButton,
+        children: text,
+      }}
+      eventLogs={eventLogs}
+      onReset={handleClickReset}
+    >
+      <TooltipProvider>
+        <Tooltip
+          open={isOpen}
+          onOpenChange={handleChangeTooltipOpen}
+          clickMode={isClickMode}
+          delayDuration={Number(delayDuration)}
+        >
+          <TooltipTrigger asChild>
+            <Button type="button">툴팁이 보이는 버튼</Button>
+          </TooltipTrigger>
+          <TooltipContent
+            variant={variant}
+            size={size}
+            arrow={hasArrow}
+            side={side}
+            align={align}
+            showCloseButton={hasCloseButton}
+            onClose={handleCloseTooltip}
+          >
+            <p>{text}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </GuidePlayground>
+  );
+}
 
 function SampleTooltipPage() {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -15,10 +336,11 @@ function SampleTooltipPage() {
     <div className="guide-layout">
       <h1 className="guide-title">Tooltip Samples</h1>
       <div className="guide-content">
-        <GuideBox
-          title="기본 Tooltip"
-          description="기본 Tooltip 컴포넌트 사용 예시입니다."
-          code={`
+        <GuideSampleTabs playground={<TooltipPlayground />}>
+          <GuideBox
+            title="기본 Tooltip"
+            description="기본 Tooltip 컴포넌트 사용 예시입니다."
+            code={`
 <TooltipProvider>
   <Tooltip>
     <TooltipTrigger asChild>
@@ -30,23 +352,23 @@ function SampleTooltipPage() {
   </Tooltip>
 </TooltipProvider>
           `}
-        >
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button>툴팁이 보이는 버튼</Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>이것은 기본 툴팁입니다.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </GuideBox>
+          >
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button>툴팁이 보이는 버튼</Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>이것은 기본 툴팁입니다.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </GuideBox>
 
-        <GuideBox
-          title="다양한 variant 스타일"
-          description="variant 속성을 사용하여 다양한 스타일의 툴팁을 적용할 수 있습니다."
-          code={`
+          <GuideBox
+            title="다양한 variant 스타일"
+            description="variant 속성을 사용하여 다양한 스타일의 툴팁을 적용할 수 있습니다."
+            code={`
 <div className="flex flex-wrap gap-4">
   <TooltipProvider>
     <Tooltip>
@@ -114,79 +436,79 @@ function SampleTooltipPage() {
   </TooltipProvider>
 </div>
           `}
-        >
-          <div className="flex flex-wrap gap-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" color="grayBg">
-                    기본
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent variant="default">
-                  <p>기본 툴팁 스타일</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          >
+            <div className="flex flex-wrap gap-4">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" color="grayBg">
+                      기본
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent variant="default">
+                    <p>기본 툴팁 스타일</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" color="default">
-                    라이트
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent variant="light">
-                  <p>라이트 툴팁 스타일</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" color="default">
+                      라이트
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent variant="light">
+                    <p>라이트 툴팁 스타일</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="default" color="black">
-                    다크
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent variant="dark">
-                  <p>다크 툴팁 스타일</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="default" color="black">
+                      다크
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent variant="dark">
+                    <p>다크 툴팁 스타일</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="text" color="default">
-                    에러
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent variant="error">
-                  <p>에러 툴팁 스타일</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="text" color="default">
+                      에러
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent variant="error">
+                    <p>에러 툴팁 스타일</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" color="default">
-                    성공
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent variant="success">
-                  <p>성공 툴팁 스타일</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </GuideBox>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" color="default">
+                      성공
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent variant="success">
+                    <p>성공 툴팁 스타일</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="다양한 크기"
-          description="size 속성을 사용하여 툴팁의 크기를 조절할 수 있습니다."
-          code={`
+          <GuideBox
+            title="다양한 크기"
+            description="size 속성을 사용하여 툴팁의 크기를 조절할 수 있습니다."
+            code={`
 <div className="flex flex-wrap gap-4">
   <TooltipProvider>
     <Tooltip>
@@ -228,53 +550,53 @@ function SampleTooltipPage() {
   </TooltipProvider>
 </div>
           `}
-        >
-          <div className="flex flex-wrap gap-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" color="grayBg">
-                    작은 툴팁
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent size="sm">
-                  <p>작은 크기의 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          >
+            <div className="flex flex-wrap gap-4">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" color="grayBg">
+                      작은 툴팁
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent size="sm">
+                    <p>작은 크기의 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" color="grayBg">
-                    중간 툴팁
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent size="md">
-                  <p>중간 크기의 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" color="grayBg">
+                      중간 툴팁
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent size="md">
+                    <p>중간 크기의 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" color="grayBg">
-                    큰 툴팁
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent size="lg">
-                  <p>큰 크기의 툴팁 (긴 텍스트도 잘 표시됩니다)</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </GuideBox>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" color="grayBg">
+                      큰 툴팁
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent size="lg">
+                    <p>큰 크기의 툴팁 (긴 텍스트도 잘 표시됩니다)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="화살표 없이 사용하기"
-          description="arrow 속성을 false로 설정하여 화살표가 없는 툴팁을 사용할 수 있습니다."
-          code={`
+          <GuideBox
+            title="화살표 없이 사용하기"
+            description="arrow 속성을 false로 설정하여 화살표가 없는 툴팁을 사용할 수 있습니다."
+            code={`
 <div className="flex flex-wrap gap-4">
   <TooltipProvider>
     <Tooltip>
@@ -303,40 +625,40 @@ function SampleTooltipPage() {
   </TooltipProvider>
 </div>
           `}
-        >
-          <div className="flex flex-wrap gap-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" color="grayBg">
-                    화살표 있음
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent arrow={true}>
-                  <p>화살표가 있는 기본 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          >
+            <div className="flex flex-wrap gap-4">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" color="grayBg">
+                      화살표 있음
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent arrow={true}>
+                    <p>화살표가 있는 기본 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" color="grayBg">
-                    화살표 없음
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent arrow={false}>
-                  <p>화살표가 없는 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </GuideBox>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" color="grayBg">
+                      화살표 없음
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent arrow={false}>
+                    <p>화살표가 없는 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="다양한 트리거 요소"
-          description="TooltipTrigger는 다양한 HTML 요소를 감싸서 사용할 수 있습니다."
-          code={`
+          <GuideBox
+            title="다양한 트리거 요소"
+            description="TooltipTrigger는 다양한 HTML 요소를 감싸서 사용할 수 있습니다."
+            code={`
 <div className="flex flex-wrap gap-4 items-center">
   <TooltipProvider>
     <Tooltip>
@@ -391,66 +713,66 @@ function SampleTooltipPage() {
   </TooltipProvider>
 </div>
           `}
-        >
-          <div className="flex flex-wrap gap-4 items-center">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="default" color="default">
-                    버튼
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>버튼 요소에 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          >
+            <div className="flex flex-wrap gap-4 items-center">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="default" color="default">
+                      버튼
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>버튼 요소에 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-blue-600 underline cursor-pointer">
-                    텍스트 링크
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>텍스트 요소에 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-blue-600 underline cursor-pointer">
+                      텍스트 링크
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>텍스트 요소에 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center cursor-pointer">
-                    <span className="text-gray-700">A</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>아바타 요소에 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center cursor-pointer">
+                      <span className="text-gray-700">A</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>아바타 요소에 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="p-3 bg-gray-100 rounded-lg border cursor-pointer hover:bg-gray-200">
-                    <span className="text-sm">카드 요소</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>카드 요소에 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </GuideBox>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="p-3 bg-gray-100 rounded-lg border cursor-pointer hover:bg-gray-200">
+                      <span className="text-sm">카드 요소</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>카드 요소에 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="TooltipProvider delay 속성"
-          description="TooltipProvider의 delay 속성을 사용하여 툴팁이 나타나는 속도를 조절할 수 있습니다."
-          code={`
+          <GuideBox
+            title="TooltipProvider delay 속성"
+            description="TooltipProvider의 delay 속성을 사용하여 툴팁이 나타나는 속도를 조절할 수 있습니다."
+            code={`
 <div className="flex flex-wrap gap-4">
   <TooltipProvider delay="fast">
     <Tooltip>
@@ -492,53 +814,53 @@ function SampleTooltipPage() {
   </TooltipProvider>
 </div>
           `}
-        >
-          <div className="flex flex-wrap gap-4">
-            <TooltipProvider delay="fast">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" color="gray">
-                    빠른 툴팁
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>빠르게 나타나는 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          >
+            <div className="flex flex-wrap gap-4">
+              <TooltipProvider delay="fast">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" color="gray">
+                      빠른 툴팁
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>빠르게 나타나는 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider delay="default">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" color="gray">
-                    기본 툴팁
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>기본 속도로 나타나는 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+              <TooltipProvider delay="default">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" color="gray">
+                      기본 툴팁
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>기본 속도로 나타나는 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider delay="slow">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" color="gray">
-                    느린 툴팁
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>느리게 나타나는 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </GuideBox>
+              <TooltipProvider delay="slow">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" color="gray">
+                      느린 툴팁
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>느리게 나타나는 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="복잡한 내용을 가진 툴팁"
-          description="툴팁 내부에 복잡한 HTML 요소를 넣을 수 있습니다."
-          code={`
+          <GuideBox
+            title="복잡한 내용을 가진 툴팁"
+            description="툴팁 내부에 복잡한 HTML 요소를 넣을 수 있습니다."
+            code={`
 <TooltipProvider>
   <Tooltip>
     <TooltipTrigger asChild>
@@ -569,42 +891,42 @@ function SampleTooltipPage() {
   </Tooltip>
 </TooltipProvider>
           `}
-        >
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="default" size="md" color="default">
-                  정보 버튼
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent size="lg" className="max-w-xs">
-                <div className="space-y-2">
-                  <div className="font-medium">중요한 정보</div>
-                  <p className="text-sm text-gray-600">
-                    이 툴팁은 여러 줄의 텍스트와 다양한 요소를 포함할 수
-                    있습니다. 긴 설명이나 추가 정보를 표시할 때 유용합니다.
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-                      태그 1
-                    </span>
-                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                      태그 2
-                    </span>
+          >
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="default" size="md" color="default">
+                    정보 버튼
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent size="lg" className="max-w-xs">
+                  <div className="space-y-2">
+                    <div className="font-medium">중요한 정보</div>
+                    <p className="text-sm text-gray-600">
+                      이 툴팁은 여러 줄의 텍스트와 다양한 요소를 포함할 수
+                      있습니다. 긴 설명이나 추가 정보를 표시할 때 유용합니다.
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                        태그 1
+                      </span>
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+                        태그 2
+                      </span>
+                    </div>
+                    <button className="mt-2 px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors">
+                      액션 버튼
+                    </button>
                   </div>
-                  <button className="mt-2 px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors">
-                    액션 버튼
-                  </button>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </GuideBox>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </GuideBox>
 
-        <GuideBox
-          title="전역 TooltipProvider 사용"
-          description="여러 툴팁을 함께 사용할 때는 하나의 TooltipProvider로 감싸면 됩니다."
-          code={`
+          <GuideBox
+            title="전역 TooltipProvider 사용"
+            description="여러 툴팁을 함께 사용할 때는 하나의 TooltipProvider로 감싸면 됩니다."
+            code={`
 <TooltipProvider>
   <div className="flex gap-4">
     <Tooltip>
@@ -642,49 +964,49 @@ function SampleTooltipPage() {
   </div>
 </TooltipProvider>
           `}
-        >
-          <TooltipProvider>
-            <div className="flex gap-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" color="grayBg">
-                    첫 번째 버튼
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>첫 번째 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
+          >
+            <TooltipProvider>
+              <div className="flex gap-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" color="grayBg">
+                      첫 번째 버튼
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>첫 번째 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" color="grayBg">
-                    두 번째 버튼
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent variant="success">
-                  <p>두 번째 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" color="grayBg">
+                      두 번째 버튼
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent variant="success">
+                    <p>두 번째 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" color="grayBg">
-                    세 번째 버튼
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent variant="error">
-                  <p>세 번째 툴팁</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </TooltipProvider>
-        </GuideBox>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" color="grayBg">
+                      세 번째 버튼
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent variant="error">
+                    <p>세 번째 툴팁</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+          </GuideBox>
 
-        <GuideBox
-          title="포탈 옵션과 컨테이너 설정"
-          description="portal 속성으로 body에 포탈로 뜰지, 트리거 요소 바로 아래에 나올지 선택할 수 있습니다. container 속성으로 특정 DOM 요소 안에 툴팁이 뜨게 할 수도 있습니다."
-          code={`
+          <GuideBox
+            title="포탈 옵션과 컨테이너 설정"
+            description="portal 속성으로 body에 포탈로 뜰지, 트리거 요소 바로 아래에 나올지 선택할 수 있습니다. container 속성으로 특정 DOM 요소 안에 툴팁이 뜨게 할 수도 있습니다."
+            code={`
 // 포탈 사용하지 않음 (트리거 요소 바로 아래에 렌더링)
 <TooltipProvider>
   <Tooltip>
@@ -738,70 +1060,70 @@ return (
   </Tooltip>
 </TooltipProvider>
           `}
-        >
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-medium mb-2">포탈 사용하지 않음</h3>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="default" color="default">
-                      포탈 없이
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent portal={false}>
-                    <p>
-                      이 툴팁은 포탈을 사용하지 않고 트리거 요소 바로 아래에
-                      렌더링됩니다.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+          >
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-medium mb-2">포탈 사용하지 않음</h3>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="default" color="default">
+                        포탈 없이
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent portal={false}>
+                      <p>
+                        이 툴팁은 포탈을 사용하지 않고 트리거 요소 바로 아래에
+                        렌더링됩니다.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
 
-            <div
-              ref={containerRef}
-              className="relative border-2 border-dashed border-green-300 p-4 rounded-lg"
-            >
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="default" color="gray">
-                      컨테이너 안에
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    container={containerRef as React.RefObject<HTMLElement>}
-                  >
-                    <p>이 툴팁은 특정 컨테이너 요소 안에 렌더링됩니다.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+              <div
+                ref={containerRef}
+                className="relative border-2 border-dashed border-green-300 p-4 rounded-lg"
+              >
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="default" color="gray">
+                        컨테이너 안에
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      container={containerRef as React.RefObject<HTMLElement>}
+                    >
+                      <p>이 툴팁은 특정 컨테이너 요소 안에 렌더링됩니다.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
 
-            <div>
-              <h3 className="text-sm font-medium mb-2">
-                기본 동작 (body 포탈)
-              </h3>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="default" color="black">
-                      기본 포탈
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>이 툴팁은 기본적으로 body에 포탈로 렌더링됩니다.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div>
+                <h3 className="text-sm font-medium mb-2">
+                  기본 동작 (body 포탈)
+                </h3>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="default" color="black">
+                        기본 포탈
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>이 툴팁은 기본적으로 body에 포탈로 렌더링됩니다.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
-          </div>
-        </GuideBox>
-        <GuideBox
-          title="고급 상호작용 기능"
-          description="clickMode는 hover로 열리지 않고, 포인터는 pointerup으로 토글합니다. 마우스만 트리거 밖으로 빼도 닫히지 않으며, 바깥 클릭·Escape로 닫힙니다. defaultOpen은 clickMode일 때 마운트 시 열린 상태로 시작합니다."
-          code={`
+          </GuideBox>
+          <GuideBox
+            title="고급 상호작용 기능"
+            description="clickMode는 hover로 열리지 않고, 포인터는 pointerup으로 토글합니다. 마우스만 트리거 밖으로 빼도 닫히지 않으며, 바깥 클릭·Escape로 닫힙니다. defaultOpen은 clickMode일 때 마운트 시 열린 상태로 시작합니다."
+            code={`
 // 1. 클릭 모드 (clickMode) — hover로 열리지 않음, 트리거는 pointerup으로 토글
 <TooltipProvider>
   <Tooltip clickMode>
@@ -874,121 +1196,122 @@ return (
   </Tooltip>
 </TooltipProvider>
           `}
-        >
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-medium mb-2">
-                클릭 모드 (clickMode)
-              </h3>
-              <div className="flex flex-wrap gap-4">
+          >
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-medium mb-2">
+                  클릭 모드 (clickMode)
+                </h3>
+                <div className="flex flex-wrap gap-4">
+                  <TooltipProvider>
+                    <Tooltip clickMode>
+                      <TooltipTrigger asChild>
+                        <Button variant="default" size="md" color="default">
+                          클릭 모드 툴팁
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          hover로는 열리지 않고, 트리거를 눌렀다 떼면(pointerup)
+                          열고 닫습니다.
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          마우스만 트리거 밖으로 빼도 닫히지 않습니다.
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          바깥 영역 클릭·Escape로 닫힙니다.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip clickMode defaultOpen>
+                      <TooltipTrigger asChild>
+                        <Button variant="default" size="md" color="black">
+                          기본 열린 클릭 모드
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          clickMode + defaultOpen — 마운트 시 열린 상태로
+                          시작합니다.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium mb-2">
+                  닫기 버튼 (clickMode + showCloseButton + defaultOpen)
+                </h3>
                 <TooltipProvider>
-                  <Tooltip clickMode>
+                  <Tooltip clickMode defaultOpen>
                     <TooltipTrigger asChild>
-                      <Button variant="default" size="md" color="default">
-                        클릭 모드 툴팁
+                      <Button variant="outline" size="md" color="default">
+                        닫기 버튼 있음
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        hover로는 열리지 않고, 트리거를 눌렀다 떼면(pointerup)
-                        열고 닫습니다.
+                    <TooltipContent showCloseButton>
+                      <p>이 툴팁은 닫기 버튼이 있습니다.</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        X 버튼·트리거 재클릭·바깥 클릭으로 닫을 수 있습니다.
                       </p>
                       <p className="text-sm text-gray-600 mt-1">
-                        마우스만 트리거 밖으로 빼도 닫히지 않습니다.
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        바깥 영역 클릭·Escape로 닫힙니다.
+                        open/onOpenChange 없이 clickMode만으로 동작합니다.
                       </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+              </div>
 
+              <div>
+                <h3 className="text-sm font-medium mb-2">
+                  hover + defaultOpen (clickMode 없음)
+                </h3>
                 <TooltipProvider>
-                  <Tooltip clickMode defaultOpen>
+                  <Tooltip defaultOpen>
                     <TooltipTrigger asChild>
-                      <Button variant="default" size="md" color="black">
-                        기본 열린 클릭 모드
+                      <Button variant="ghost" size="md" color="default">
+                        기본 열림 (hover)
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>
-                        clickMode + defaultOpen — 마운트 시 열린 상태로
-                        시작합니다.
+                      <p>clickMode가 아닐 때는 Radix 기본 hover 동작입니다.</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        defaultOpen이면 처음부터 열려 있고, 포인터로 열고 닫을 수
+                        있습니다.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium mb-2">
+                  일반 hover 툴팁 (clickMode 없음)
+                </h3>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="text" size="md" color="default">
+                        일반 hover 툴팁
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>clickMode 없이 기본 동작(hover)입니다.</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        트리거에 포인터를 올리면 열립니다.
                       </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
             </div>
-
-            <div>
-              <h3 className="text-sm font-medium mb-2">
-                닫기 버튼 (clickMode + showCloseButton + defaultOpen)
-              </h3>
-              <TooltipProvider>
-                <Tooltip clickMode defaultOpen>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="md" color="default">
-                      닫기 버튼 있음
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent showCloseButton>
-                    <p>이 툴팁은 닫기 버튼이 있습니다.</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      X 버튼·트리거 재클릭·바깥 클릭으로 닫을 수 있습니다.
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      open/onOpenChange 없이 clickMode만으로 동작합니다.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium mb-2">
-                hover + defaultOpen (clickMode 없음)
-              </h3>
-              <TooltipProvider>
-                <Tooltip defaultOpen>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="md" color="default">
-                      기본 열림 (hover)
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>clickMode가 아닐 때는 Radix 기본 hover 동작입니다.</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      defaultOpen이면 처음부터 열려 있고, 포인터로 열고 닫을 수
-                      있습니다.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium mb-2">
-                일반 hover 툴팁 (clickMode 없음)
-              </h3>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="text" size="md" color="default">
-                      일반 hover 툴팁
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>clickMode 없이 기본 동작(hover)입니다.</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      트리거에 포인터를 올리면 열립니다.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
-        </GuideBox>
+          </GuideBox>
+        </GuideSampleTabs>
       </div>
     </div>
   );

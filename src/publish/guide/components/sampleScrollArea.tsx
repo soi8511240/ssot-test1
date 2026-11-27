@@ -1,5 +1,23 @@
+import { useState } from "react";
+
 import { ScrollArea, ScrollBar } from "@/components/ui";
 import { GuideBox } from "@/publish/guide/GuideBox";
+import {
+  GuidePlayground,
+  GuideSampleTabs,
+  PlaygroundRadioControl,
+  PlaygroundSwitchControl,
+  PlaygroundTextControl,
+  type GuidePlaygroundControl,
+} from "@/publish/guide/GuidePlayground";
+
+type ScrollAreaType = "auto" | "always" | "scroll" | "hover";
+
+const SCROLL_AREA_TYPES: ScrollAreaType[] = ["hover", "auto", "always", "scroll"];
+const DEFAULT_TYPE: ScrollAreaType = "hover";
+const DEFAULT_SCROLL_HIDE_DELAY = "600";
+const DEFAULT_ITEM_COUNT = "20";
+const MAX_ITEM_COUNT = 100;
 
 const loremItems = [
   "사용자 인증 및 권한 관리 시스템",
@@ -31,11 +49,181 @@ Radix UI ScrollArea를 기반으로 구현되었으며, 커스텀 스크롤바 �
 접근성 측면에서도 키보드 탐색 및 포커스 관리를 지원하여 다양한 환경에서 원활하게 동작합니다.
 이 컴포넌트는 긴 목록, 긴 텍스트 블록, 데이터 테이블, 사이드바, 코드 블록 등 다양한 맥락에서 활용할 수 있습니다.`;
 
+const LONG_ROW_SUFFIX = loremText.split("\n")[0];
+
+/** 현재 컨트롤 값으로 사용 코드를 만듭니다. */
+function buildPlaygroundCode(
+  scrollType: ScrollAreaType,
+  scrollHideDelay: string,
+  hasHorizontalBar: boolean,
+  itemCount: number,
+) {
+  const isDelayUsed = scrollType === "scroll" || scrollType === "hover";
+  const typeProp = scrollType !== DEFAULT_TYPE ? ` type="${scrollType}"` : "";
+  const delayProp =
+    isDelayUsed &&
+    scrollHideDelay !== DEFAULT_SCROLL_HIDE_DELAY &&
+    scrollHideDelay !== ""
+      ? ` scrollHideDelay={${Number(scrollHideDelay)}}`
+      : "";
+  const innerClass = hasHorizontalBar ? "w-max p-4" : "p-4";
+  const rowClass = hasHorizontalBar
+    ? "whitespace-nowrap border-b py-2 text-sm last:border-0"
+    : "border-b py-2 text-sm last:border-0";
+  const rowText = hasHorizontalBar ? "{item} · {longText}" : "{item}";
+  const horizontalBar = hasHorizontalBar
+    ? '\n  <ScrollBar orientation="horizontal" />'
+    : "";
+
+  return `// items: 항목 ${itemCount}개
+<ScrollArea${typeProp}${delayProp} className="h-64 w-full max-w-md rounded-lg border bg-base">
+  <div className="${innerClass}">
+    {items.map((item) => (
+      <div key={item} className="${rowClass}">
+        ${rowText}
+      </div>
+    ))}
+  </div>${horizontalBar}
+</ScrollArea>`;
+}
+
+/** ScrollArea Playground (이 페이지에서만 사용) */
+function ScrollAreaPlayground() {
+  const [scrollType, setScrollType] = useState<ScrollAreaType>(DEFAULT_TYPE);
+  const [scrollHideDelay, setScrollHideDelay] = useState(
+    DEFAULT_SCROLL_HIDE_DELAY,
+  );
+  const [hasHorizontalBar, setHasHorizontalBar] = useState(false);
+  const [itemCountText, setItemCountText] = useState(DEFAULT_ITEM_COUNT);
+
+  const isDelayUsed = scrollType === "scroll" || scrollType === "hover";
+  const itemCount = Math.min(
+    Math.max(Number(itemCountText) || 0, 0),
+    MAX_ITEM_COUNT,
+  );
+  const scrollHideDelayNumber = Number(scrollHideDelay) || 0;
+  const items = Array.from(
+    { length: itemCount },
+    (_, index) =>
+      `${String(index + 1).padStart(2, "0")} ${loremItems[index % loremItems.length]}`,
+  );
+
+  const handleClickReset = () => {
+    setScrollType(DEFAULT_TYPE);
+    setScrollHideDelay(DEFAULT_SCROLL_HIDE_DELAY);
+    setHasHorizontalBar(false);
+    setItemCountText(DEFAULT_ITEM_COUNT);
+  };
+
+  const controls: GuidePlaygroundControl[] = [
+    {
+      name: "type",
+      type: '"hover" | "auto" | "always" | "scroll"',
+      description:
+        "스크롤바 표시 방식. hover: 마우스를 올렸을 때, auto: 넘칠 때 항상, always: 항상, scroll: 스크롤하는 동안",
+      control: (
+        <PlaygroundRadioControl
+          label="type"
+          value={scrollType}
+          options={SCROLL_AREA_TYPES}
+          onValueChange={(next) => setScrollType(next as ScrollAreaType)}
+        />
+      ),
+    },
+    {
+      name: "scrollHideDelay",
+      type: "number",
+      description:
+        '스크롤바가 사라지기까지 시간(ms). type="hover"·"scroll"에서만 적용, 기본 600',
+      control: (
+        <PlaygroundTextControl
+          label="scrollHideDelay"
+          type="number"
+          value={scrollHideDelay}
+          onValueChange={setScrollHideDelay}
+          disabled={!isDelayUsed}
+        />
+      ),
+    },
+    {
+      name: 'ScrollBar orientation="horizontal"',
+      type: "boolean",
+      description:
+        "가로 스크롤바 추가 (세로 스크롤바는 ScrollArea에 기본 포함). 미리보기 행을 한 줄로 길게 바꿉니다.",
+      control: (
+        <PlaygroundSwitchControl
+          label="horizontal ScrollBar"
+          checked={hasHorizontalBar}
+          onCheckedChange={setHasHorizontalBar}
+        />
+      ),
+    },
+    {
+      name: "children (항목 수)",
+      type: "number",
+      description: `미리보기 목록 항목 수 (목업, 최대 ${MAX_ITEM_COUNT}). 영역보다 적으면 스크롤바가 생기지 않습니다.`,
+      control: (
+        <PlaygroundTextControl
+          label="항목 수"
+          type="number"
+          value={itemCountText}
+          onValueChange={setItemCountText}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <GuidePlayground
+      code={buildPlaygroundCode(
+        scrollType,
+        scrollHideDelay,
+        hasHorizontalBar,
+        itemCount,
+      )}
+      controls={controls}
+      controlsNote="ScrollArea는 value·open 같은 상태나 이벤트 Props가 없어 이벤트 로그를 두지 않았습니다. dir(rtl)은 이 프로젝트에서 쓰지 않아 넣지 않았습니다."
+      state={{
+        type: scrollType,
+        scrollHideDelay: isDelayUsed
+          ? scrollHideDelayNumber
+          : '(type="hover"·"scroll"에서만 적용)',
+        horizontalScrollBar: hasHorizontalBar,
+        itemCount,
+      }}
+      onReset={handleClickReset}
+    >
+      <ScrollArea
+        type={scrollType}
+        scrollHideDelay={scrollHideDelayNumber}
+        className="h-64 w-full max-w-md rounded-lg border bg-base"
+      >
+        <div className={hasHorizontalBar ? "w-max p-4" : "p-4"}>
+          {items.map((item) => (
+            <div
+              key={item}
+              className={
+                hasHorizontalBar
+                  ? "whitespace-nowrap border-b py-2 text-sm text-font-b last:border-0"
+                  : "border-b py-2 text-sm text-font-b last:border-0"
+              }
+            >
+              {hasHorizontalBar ? `${item} · ${LONG_ROW_SUFFIX}` : item}
+            </div>
+          ))}
+        </div>
+        {hasHorizontalBar ? <ScrollBar orientation="horizontal" /> : null}
+      </ScrollArea>
+    </GuidePlayground>
+  );
+}
+
 function SampleScrollAreaPage() {
   return (
     <div className="guide-layout">
       <h1 className="guide-title">ScrollArea Samples</h1>
       <div className="guide-content">
+        <GuideSampleTabs playground={<ScrollAreaPlayground />}>
         {/* 수직 스크롤 */}
         <GuideBox
           title="Vertical Scroll"
@@ -199,6 +387,7 @@ function SampleScrollAreaPage() {
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </GuideBox>
+        </GuideSampleTabs>
       </div>
     </div>
   );

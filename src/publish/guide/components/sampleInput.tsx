@@ -1,3 +1,5 @@
+import { useId, useState, type ChangeEvent } from "react";
+
 import {
   Icon,
   Input,
@@ -8,12 +10,247 @@ import {
   InputGroupText,
 } from "@/components/ui";
 import { GuideBox } from "@/publish/guide/GuideBox";
+import {
+  GuidePlayground,
+  GuideSampleTabs,
+  PlaygroundRadioControl,
+  PlaygroundSwitchControl,
+  PlaygroundTextControl,
+  type GuidePlaygroundControl,
+} from "@/publish/guide/GuidePlayground";
+import { useGuideEventLog } from "@/publish/guide/useGuideEventLog";
+
+type InputType = "text" | "password" | "email" | "tel";
+
+const INPUT_TYPES: InputType[] = ["text", "password", "email", "tel"];
+const DEFAULT_PLACEHOLDER = "이름을 입력하세요";
+const RESET_LABEL = "입력값 지우기";
+
+type InputPlaygroundOptions = {
+  inputType: InputType;
+  inputValue: string;
+  placeholder: string;
+  isDisabled: boolean;
+  isReadOnly: boolean;
+  isInvalid: boolean;
+  isResetEnabled: boolean;
+};
+
+/** 현재 컨트롤 값으로 사용 코드를 만듭니다. */
+function buildPlaygroundCode({
+  inputType,
+  inputValue,
+  placeholder,
+  isDisabled,
+  isReadOnly,
+  isInvalid,
+  isResetEnabled,
+}: InputPlaygroundOptions) {
+  const props = [
+    "id={inputId}",
+    inputType === "text" ? "" : `type="${inputType}"`,
+    "value={value}",
+    "onChange={(e) => setValue(e.target.value)}",
+    placeholder ? `placeholder="${placeholder}"` : "",
+    isDisabled ? "disabled" : "",
+    isReadOnly ? "readOnly" : "",
+    isInvalid ? 'aria-invalid="true"' : "",
+    isResetEnabled ? "resetEnabled" : "",
+    isResetEnabled ? `resetLabel="${RESET_LABEL}"` : "",
+    isResetEnabled ? "onResetValue={setValue}" : "",
+    'className="w-full max-w-md"',
+  ]
+    .filter(Boolean)
+    .map((prop) => `  ${prop}`)
+    .join("\n");
+
+  return `const inputId = useId();
+const [value, setValue] = useState(${JSON.stringify(inputValue)});
+
+<label htmlFor={inputId}>이름</label>
+<Input
+${props}
+/>`;
+}
+
+/** Input Playground (이 페이지에서만 사용) */
+function InputPlayground() {
+  const inputId = useId();
+  const [inputType, setInputType] = useState<InputType>("text");
+  const [inputValue, setInputValue] = useState("");
+  const [placeholder, setPlaceholder] = useState(DEFAULT_PLACEHOLDER);
+  const [isDisabled, setIsDisabled] = useState(false);
+  const [isReadOnly, setIsReadOnly] = useState(false);
+  const [isInvalid, setIsInvalid] = useState(false);
+  const [isResetEnabled, setIsResetEnabled] = useState(true);
+  const { eventLogs, addEventLog, clearEventLogs } = useGuideEventLog();
+
+  const handleChangeInput = (event: ChangeEvent<HTMLInputElement>) => {
+    setInputValue(event.target.value);
+    addEventLog("onChange", event.target.value);
+  };
+
+  // 제어형에서는 리셋 버튼이 onChange를 부르지 않을 수 있어 onResetValue에서도 값을 맞춥니다.
+  const handleResetInputValue = (nextValue: string) => {
+    setInputValue(nextValue);
+    addEventLog("onResetValue", nextValue);
+  };
+
+  const handleClickReset = () => {
+    setInputType("text");
+    setInputValue("");
+    setPlaceholder(DEFAULT_PLACEHOLDER);
+    setIsDisabled(false);
+    setIsReadOnly(false);
+    setIsInvalid(false);
+    setIsResetEnabled(true);
+    clearEventLogs();
+  };
+
+  const controls: GuidePlaygroundControl[] = [
+    {
+      name: "value",
+      type: "string",
+      description: "입력값 (onChange와 함께 제어형)",
+      control: (
+        <PlaygroundTextControl
+          label="value"
+          value={inputValue}
+          onValueChange={setInputValue}
+        />
+      ),
+    },
+    {
+      name: "type",
+      type: '"text" | "password" | "email" | "tel" …',
+      description: "<input> type (날짜는 DatePicker를 씁니다)",
+      control: (
+        <PlaygroundRadioControl
+          label="type"
+          value={inputType}
+          options={INPUT_TYPES}
+          onValueChange={(next) => setInputType(next as InputType)}
+        />
+      ),
+    },
+    {
+      name: "placeholder",
+      type: "string",
+      description: "비었을 때 보이는 글자 (라벨 대신 쓰지 않음)",
+      control: (
+        <PlaygroundTextControl
+          label="placeholder"
+          value={placeholder}
+          onValueChange={setPlaceholder}
+        />
+      ),
+    },
+    {
+      name: "disabled",
+      type: "boolean",
+      description: "입력 불가",
+      control: (
+        <PlaygroundSwitchControl
+          label="disabled"
+          checked={isDisabled}
+          onCheckedChange={setIsDisabled}
+        />
+      ),
+    },
+    {
+      name: "readOnly",
+      type: "boolean",
+      description: "읽기 전용 (계산된 결과처럼 읽을 수 있어야 할 때)",
+      control: (
+        <PlaygroundSwitchControl
+          label="readOnly"
+          checked={isReadOnly}
+          onCheckedChange={setIsReadOnly}
+        />
+      ),
+    },
+    {
+      name: "aria-invalid",
+      type: '"true"',
+      description: "오류 테두리 (오류 문구와 aria-describedby를 함께 씀)",
+      control: (
+        <PlaygroundSwitchControl
+          label="aria-invalid"
+          checked={isInvalid}
+          onCheckedChange={setIsInvalid}
+        />
+      ),
+    },
+    {
+      name: "resetEnabled",
+      type: "boolean",
+      description:
+        "값이 있을 때 지우기(×) 버튼 표시 (disabled·readOnly이면 숨김)",
+      control: (
+        <PlaygroundSwitchControl
+          label="resetEnabled"
+          checked={isResetEnabled}
+          onCheckedChange={setIsResetEnabled}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <GuidePlayground
+      description="Controls에서 Props를 바꾸면 미리보기와 코드가 바로 바뀝니다. 미리보기에 입력해도 Controls의 value가 함께 바뀝니다(제어형)."
+      code={buildPlaygroundCode({
+        inputType,
+        inputValue,
+        placeholder,
+        isDisabled,
+        isReadOnly,
+        isInvalid,
+        isResetEnabled,
+      })}
+      controls={controls}
+      controlsNote="InputGroup(type·InputGroupAddon align)은 앞뒤에 글자·버튼을 붙이는 구성이라 Samples 탭의 예시를 참고하세요. className으로 높이·테두리·글자를 바꾸는 것은 금지(docs/components/Input.md)라 넣지 않았습니다."
+      state={{
+        value: inputValue,
+        type: inputType,
+        placeholder,
+        disabled: isDisabled,
+        readOnly: isReadOnly,
+        "aria-invalid": isInvalid,
+        resetEnabled: isResetEnabled,
+      }}
+      eventLogs={eventLogs}
+      onReset={handleClickReset}
+    >
+      <div className="flex w-full max-w-md flex-col gap-2">
+        <label htmlFor={inputId} className="text-sm text-font-g">
+          이름
+        </label>
+        <Input
+          id={inputId}
+          type={inputType}
+          value={inputValue}
+          onChange={handleChangeInput}
+          placeholder={placeholder}
+          disabled={isDisabled}
+          readOnly={isReadOnly}
+          aria-invalid={isInvalid ? "true" : undefined}
+          resetEnabled={isResetEnabled}
+          resetLabel={RESET_LABEL}
+          onResetValue={handleResetInputValue}
+          className="w-full max-w-md"
+        />
+      </div>
+    </GuidePlayground>
+  );
+}
 
 function SampleInputPage() {
   return (
     <div className="guide-layout">
       <h1 className="guide-title">Input Samples</h1>
       <div className="guide-content">
+        <GuideSampleTabs playground={<InputPlayground />}>
         <GuideBox
           title="Basic input"
           description="기본 입력창, disabled, password, invalid 상태 예시입니다."
@@ -470,6 +707,7 @@ function SampleInputPage() {
             </div>
           </div>
         </GuideBox>
+        </GuideSampleTabs>
       </div>
     </div>
   );

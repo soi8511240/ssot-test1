@@ -3,7 +3,15 @@ import type { ReactNode, RefObject } from "react";
 import { DndProvider } from "react-dnd";
 import { MultiBackend, getBackendOptions } from "@minoru/react-dnd-treeview";
 import { GuideBox } from "@/publish/guide/GuideBox";
-import { TreeView } from "@/components/ui";
+import {
+  GuidePlayground,
+  GuideSampleTabs,
+  PlaygroundCheckboxControl,
+  PlaygroundSwitchControl,
+  type GuidePlaygroundControl,
+} from "@/publish/guide/GuidePlayground";
+import { useGuideEventLog } from "@/publish/guide/useGuideEventLog";
+import { Checkbox, TreeView } from "@/components/ui";
 import {
   Check,
   ChevronDown,
@@ -584,17 +592,235 @@ function MultiAreaDragTree() {
   );
 }
 
+const PLAYGROUND_DEFAULT_CHECKED_IDS: TreeNodeId[] = [];
+
+/** 현재 컨트롤 값으로 사용 코드를 만듭니다. */
+function buildTreeViewPlaygroundCode(
+  isDragEnabled: boolean,
+  isPlaceholderEnabled: boolean,
+  isCheckCascade: boolean,
+  checkedIds: TreeNodeId[],
+) {
+  const optionProps = [
+    isDragEnabled ? "dragEnabled" : "",
+    isDragEnabled && isPlaceholderEnabled ? "enablePlaceholder" : "",
+    isCheckCascade ? "checkCascade" : "",
+  ]
+    .filter(Boolean)
+    .map((prop) => `\n  ${prop}`)
+    .join("");
+  const handleCode = isDragEnabled
+    ? `
+      <div ref={handleRef} className="cursor-grab" aria-label="drag handle">
+        <GripVertical size={16} aria-hidden />
+      </div>`
+    : "";
+
+  return `import { useState } from "react";
+import { Checkbox, TreeView, type TreeViewNodeId } from "@/components/ui";
+
+const [treeData, setTreeData] = useState(initialData);
+const [checkedIds, setCheckedIds] = useState<TreeViewNodeId[]>(${JSON.stringify(checkedIds)});
+
+// 바깥에서 이미 DndProvider로 감쌌다면 withDndProvider={false}를 추가합니다.
+<TreeView
+  treeData={treeData}
+  onTreeDataChange={setTreeData}${optionProps}
+  checkedIds={checkedIds}
+  onCheckedIdsChange={setCheckedIds}
+  renderNode={(node, { depth, isOpen, onToggle, isChecked, onCheckToggle${isDragEnabled ? ", handleRef" : ""} }) => (
+    <div style={{ marginLeft: depth * 10 }} className="flex items-center gap-2">${handleCode}
+      {node.droppable ? (
+        <button type="button" onClick={onToggle} aria-label={isOpen ? "접기" : "펼치기"}>
+          {isOpen ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
+        </button>
+      ) : (
+        <span aria-hidden className="inline-block w-[16px]" />
+      )}
+      <Checkbox label={node.text} checked={isChecked} onCheckedChange={onCheckToggle} />
+    </div>
+  )}
+/>`;
+}
+
+/** TreeView Playground (이 페이지에서만 사용) */
+function TreeViewPlayground() {
+  const [treeData, setTreeData] = useState<TreeNodeShape[]>(() =>
+    initialData.map((n) => ({ ...n })),
+  );
+  const [isDragEnabled, setIsDragEnabled] = useState(false);
+  const [isPlaceholderEnabled, setIsPlaceholderEnabled] = useState(false);
+  const [isCheckCascade, setIsCheckCascade] = useState(false);
+  const [checkedIds, setCheckedIds] = useState<TreeNodeId[]>(
+    PLAYGROUND_DEFAULT_CHECKED_IDS,
+  );
+  const { eventLogs, addEventLog, clearEventLogs } = useGuideEventLog();
+
+  const nodeOptions = treeData.map((node) => ({
+    value: String(node.id),
+    label: node.text,
+  }));
+
+  const handleChangeTreeData = (nextTreeData: TreeNodeShape[]) => {
+    setTreeData(nextTreeData);
+    addEventLog(
+      "onTreeDataChange",
+      nextTreeData.map((node) => `${node.id}→${node.parent}`),
+    );
+  };
+
+  const handleChangeCheckedIds = (nextCheckedIds: TreeNodeId[]) => {
+    setCheckedIds(nextCheckedIds);
+    addEventLog("onCheckedIdsChange", nextCheckedIds);
+  };
+
+  const handleChangeCheckedControl = (nextValues: string[]) => {
+    // Controls 값은 문자열이라 원래 노드 id(숫자)로 되돌립니다.
+    setCheckedIds(
+      treeData
+        .filter((node) => nextValues.includes(String(node.id)))
+        .map((node) => node.id),
+    );
+  };
+
+  const handleClickReset = () => {
+    setTreeData(initialData.map((n) => ({ ...n })));
+    setIsDragEnabled(false);
+    setIsPlaceholderEnabled(false);
+    setIsCheckCascade(false);
+    setCheckedIds(PLAYGROUND_DEFAULT_CHECKED_IDS);
+    clearEventLogs();
+  };
+
+  const controls: GuidePlaygroundControl[] = [
+    {
+      name: "dragEnabled",
+      type: "boolean",
+      description:
+        "드래그로 노드 순서·위치 변경 (폴더 노드 안으로만 넣을 수 있음). 바뀐 트리는 onTreeDataChange로 받습니다.",
+      control: (
+        <PlaygroundSwitchControl
+          label="dragEnabled"
+          checked={isDragEnabled}
+          onCheckedChange={setIsDragEnabled}
+        />
+      ),
+    },
+    {
+      name: "enablePlaceholder",
+      type: "boolean",
+      description:
+        "드래그 중 놓일 위치를 선으로 미리 표시 (dragEnabled일 때만 적용)",
+      control: (
+        <PlaygroundSwitchControl
+          label="enablePlaceholder"
+          checked={isDragEnabled && isPlaceholderEnabled}
+          onCheckedChange={setIsPlaceholderEnabled}
+          disabled={!isDragEnabled}
+        />
+      ),
+    },
+    {
+      name: "checkCascade",
+      type: "boolean",
+      description:
+        "부모를 체크하면 자식 전체 체크, 자식이 모두 체크되면 부모도 체크",
+      control: (
+        <PlaygroundSwitchControl
+          label="checkCascade"
+          checked={isCheckCascade}
+          onCheckedChange={setIsCheckCascade}
+        />
+      ),
+    },
+    {
+      name: "checkedIds",
+      type: "TreeViewNodeId[]",
+      description:
+        "체크된 노드 (onCheckedIdsChange와 함께 제어형). 여기서 바꾸면 checkCascade 연동 없이 그대로 반영됩니다.",
+      control: (
+        <PlaygroundCheckboxControl
+          label="checkedIds"
+          value={checkedIds.map(String)}
+          options={nodeOptions}
+          onValueChange={handleChangeCheckedControl}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <GuidePlayground
+      description="Controls에서 Props를 바꾸면 미리보기와 코드가 바로 바뀝니다. 미리보기에서 체크하거나 드래그해도 State가 함께 바뀝니다(제어형). 폴더 열기/닫기는 TreeView 내부 상태라 renderNode의 onToggle로만 기록합니다."
+      code={buildTreeViewPlaygroundCode(
+        isDragEnabled,
+        isPlaceholderEnabled,
+        isCheckCascade,
+        checkedIds,
+      )}
+      controls={controls}
+      controlsNote="dropTargetOffsetPx(드롭 판정 여백 px)는 화면에서 차이를 확인하기 어려워 Samples 예시를 참고합니다. indentPerDepthPx는 renderNode를 쓰지 않는 기본 렌더에서만 적용되어 제외했습니다(들여쓰기는 renderNode에서 depth로 직접 지정). rootId·withDndProvider는 데이터 구조·환경 설정이라 제외했습니다."
+      state={{
+        dragEnabled: isDragEnabled,
+        enablePlaceholder: isDragEnabled && isPlaceholderEnabled,
+        checkCascade: isCheckCascade,
+        checkedIds,
+        treeData: treeData.map((node) => `${node.id}(${node.text}) → parent ${node.parent}`),
+      }}
+      eventLogs={eventLogs}
+      onReset={handleClickReset}
+    >
+      <div className="w-full max-w-md rounded-lg border-line02 border bg-base p-4">
+        <TreeView
+          treeData={treeData}
+          onTreeDataChange={handleChangeTreeData}
+          dragEnabled={isDragEnabled}
+          enablePlaceholder={isDragEnabled && isPlaceholderEnabled}
+          withDndProvider={false}
+          checkedIds={checkedIds}
+          onCheckedIdsChange={handleChangeCheckedIds}
+          checkCascade={isCheckCascade}
+          renderNode={(
+            node,
+            { depth, isOpen, onToggle, isChecked, onCheckToggle, handleRef },
+          ) => (
+            <TreeNodeChrome
+              node={node as unknown as TreeNodeShape}
+              depth={depth}
+              isOpen={isOpen}
+              onToggle={() => {
+                onToggle();
+                addEventLog("onToggle", node.id, !isOpen);
+              }}
+              handleRef={handleRef}
+              showDragHandle={isDragEnabled}
+            >
+              <Checkbox
+                label={node.text}
+                checked={isChecked}
+                onCheckedChange={onCheckToggle}
+              />
+            </TreeNodeChrome>
+          )}
+        />
+      </div>
+    </GuidePlayground>
+  );
+}
+
 function SampleTreeViewPage() {
   return (
     <div className="guide-layout">
       <h1 className="guide-title">TreeView Samples</h1>
       <div className="guide-content">
-        <div className="flex flex-col gap-4">
-          <DndProvider backend={MultiBackend} options={getBackendOptions()}>
-            <GuideBox
-              title="기본 (드래그 비활성)"
-              description="기본은 드래그로 형제 노드 순서를 변경할 수 없습니다."
-              code={`
+        {/* Playground의 TreeView도 같은 DndProvider를 쓰도록 탭 바깥에서 감쌉니다. */}
+        <DndProvider backend={MultiBackend} options={getBackendOptions()}>
+          <GuideSampleTabs playground={<TreeViewPlayground />}>
+            <div className="flex flex-col gap-4">
+              <GuideBox
+                title="기본 (드래그 비활성)"
+                description="기본은 드래그로 형제 노드 순서를 변경할 수 없습니다."
+                code={`
 import { TreeView } from "@/components/ui";
 import { ChevronDown, ChevronRight, File, Folder, FolderOpen } from "lucide-react";
 
@@ -632,14 +858,14 @@ export default function BasicTreeViewExample() {
   );
 }
               `}
-            >
-              <ReadOnlyTree />
-            </GuideBox>
+              >
+                <ReadOnlyTree />
+              </GuideBox>
 
-            <GuideBox
-              title="드래그 순서 변경 (옵션)"
-              description="`dragEnabled`를 켰을 때만 순서 변경이 가능합니다."
-              code={`
+              <GuideBox
+                title="드래그 순서 변경 (옵션)"
+                description="`dragEnabled`를 켰을 때만 순서 변경이 가능합니다."
+                code={`
 import { useState } from "react";
 import { TreeView } from "@/components/ui";
 import { GripVertical } from "lucide-react";
@@ -674,14 +900,14 @@ export default function DragTreeViewExample() {
   );
 }
               `}
-            >
-              <DragReorderTree />
-            </GuideBox>
+              >
+                <DragReorderTree />
+              </GuideBox>
 
-            <GuideBox
-              title="멀티 체크 (checkbox)"
-              description="여러 노드를 동시에 선택할 수 있는 체크 예시입니다."
-              code={`
+              <GuideBox
+                title="멀티 체크 (checkbox)"
+                description="여러 노드를 동시에 선택할 수 있는 체크 예시입니다."
+                code={`
 import { useState } from "react";
 import { TreeView, type TreeViewNodeId } from "@/components/ui";
 
@@ -714,14 +940,14 @@ export default function CheckedTreeViewExample() {
   );
 }
               `}
-            >
-              <MultiCheckTree />
-            </GuideBox>
+              >
+                <MultiCheckTree />
+              </GuideBox>
 
-            <GuideBox
-              title="수정 가능"
-              description="노드 텍스트를 인라인으로 수정할 수 있습니다."
-              code={`
+              <GuideBox
+                title="수정 가능"
+                description="노드 텍스트를 인라인으로 수정할 수 있습니다."
+                code={`
 import { useState } from "react";
 import { TreeView } from "@/components/ui";
 
@@ -783,14 +1009,14 @@ export default function EditableTreeViewExample() {
   );
 }
               `}
-            >
-              <EditableTree />
-            </GuideBox>
+              >
+                <EditableTree />
+              </GuideBox>
 
-            <GuideBox
-              title="추가 / 삭제"
-              description="노드를 추가하고(폴더/파일 선택) 서브 트리를 삭제할 수 있습니다."
-              code={`
+              <GuideBox
+                title="추가 / 삭제"
+                description="노드를 추가하고(폴더/파일 선택) 서브 트리를 삭제할 수 있습니다."
+                code={`
 import { useRef, useState } from "react";
 import { TreeView } from "@/components/ui";
 
@@ -873,14 +1099,14 @@ export default function AddDeleteTreeViewExample() {
   );
 }
               `}
-            >
-              <AddDeleteTree />
-            </GuideBox>
+              >
+                <AddDeleteTree />
+              </GuideBox>
 
-            <GuideBox
-              title="3영역 드래그 이동"
-              description="세 개의 영역 사이에서 노드를 드래그로 이동하는 예시입니다."
-              code={`
+              <GuideBox
+                title="3영역 드래그 이동"
+                description="세 개의 영역 사이에서 노드를 드래그로 이동하는 예시입니다."
+                code={`
 import { useState } from "react";
 import { DndProvider } from "react-dnd";
 import { MultiBackend, getBackendOptions } from "@minoru/react-dnd-treeview";
@@ -922,11 +1148,12 @@ export default function MultiAreaExample() {
   );
 }
               `}
-            >
-              <MultiAreaDragTree />
-            </GuideBox>
-          </DndProvider>
-        </div>
+              >
+                <MultiAreaDragTree />
+              </GuideBox>
+            </div>
+          </GuideSampleTabs>
+        </DndProvider>
       </div>
     </div>
   );

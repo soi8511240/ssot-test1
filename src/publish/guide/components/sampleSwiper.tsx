@@ -9,8 +9,299 @@ import {
   SwiperSlide,
   type SwiperInstance,
 } from "@/components/ui";
+import {
+  GuidePlayground,
+  GuideSampleTabs,
+  PlaygroundRadioControl,
+  PlaygroundSwitchControl,
+  type GuidePlaygroundControl,
+} from "@/publish/guide/GuidePlayground";
+import { useGuideEventLog } from "@/publish/guide/useGuideEventLog";
 import { Play, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+
+type SwiperPlaygroundOptions = {
+  isNavigation: boolean;
+  isPagination: boolean;
+  isLoop: boolean;
+  isAutoplay: boolean;
+  isCenteredSlides: boolean;
+  slidesPerView: string;
+  spaceBetween: string;
+};
+
+const DEFAULT_PLAYGROUND_OPTIONS: SwiperPlaygroundOptions = {
+  isNavigation: true,
+  isPagination: true,
+  isLoop: false,
+  isAutoplay: false,
+  isCenteredSlides: false,
+  slidesPerView: "1",
+  spaceBetween: "16",
+};
+
+const AUTOPLAY_DELAY = 3000;
+const SLIDES_PER_VIEW_OPTIONS = ["1", "1.2", "2", "3"];
+const SPACE_BETWEEN_OPTIONS = ["0", "8", "16", "24"];
+
+/** loop + slidesPerView 3에서도 슬라이드 수가 부족하지 않도록 6장 */
+const PLAYGROUND_SLIDES = Array.from({ length: 6 }, (_, index) => ({
+  id: `pg${index + 1}`,
+  title: `Slide ${index + 1}`,
+}));
+
+/** 현재 컨트롤 값으로 사용 코드를 만듭니다. */
+function buildPlaygroundCode(options: SwiperPlaygroundOptions) {
+  const moduleNames = [
+    options.isNavigation ? "Navigation" : "",
+    options.isPagination ? "SwiperPagination" : "",
+    options.isAutoplay ? "Autoplay" : "",
+  ].filter(Boolean);
+  const importNames = [...moduleNames, "Swiper", "SwiperSlide"].sort();
+  const props = [
+    moduleNames.length > 0 ? `modules={[${moduleNames.join(", ")}]}` : "",
+    options.isNavigation ? "navigation" : "",
+    options.isPagination ? "pagination={{ clickable: true }}" : "",
+    options.isLoop ? "loop" : "",
+    options.isAutoplay
+      ? `autoplay={{ delay: ${AUTOPLAY_DELAY}, disableOnInteraction: false }}`
+      : "",
+    options.isCenteredSlides ? "centeredSlides" : "",
+    `slidesPerView={${options.slidesPerView}}`,
+    `spaceBetween={${options.spaceBetween}}`,
+    "onSlideChange={(swiper) => setActiveIndex(swiper.realIndex)}",
+  ]
+    .filter(Boolean)
+    .map((prop) => `  ${prop}`)
+    .join("\n");
+
+  return `import {
+${importNames.map((name) => `  ${name},`).join("\n")}
+} from "@/components/ui";
+
+const [activeIndex, setActiveIndex] = useState(0);
+
+<Swiper
+${props}
+>
+  {slides.map((slide) => (
+    <SwiperSlide key={slide.id}>...</SwiperSlide>
+  ))}
+</Swiper>`;
+}
+
+/** Swiper Playground (이 페이지에서만 사용) */
+function SwiperPlayground() {
+  const [options, setOptions] = useState<SwiperPlaygroundOptions>(
+    DEFAULT_PLAYGROUND_OPTIONS,
+  );
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [swiperInstance, setSwiperInstance] = useState<SwiperInstance | null>(
+    null,
+  );
+  const { eventLogs, addEventLog, clearEventLogs } = useGuideEventLog();
+
+  const modules = [
+    options.isNavigation ? Navigation : null,
+    options.isPagination ? SwiperPagination : null,
+    options.isAutoplay ? Autoplay : null,
+  ].filter((module) => module !== null);
+
+  // 모듈·loop 등은 초기화 시점에만 반영되므로 옵션이 바뀌면 다시 마운트합니다.
+  const swiperKey = JSON.stringify(options);
+
+  const handleChangeOption = <K extends keyof SwiperPlaygroundOptions>(
+    key: K,
+    value: SwiperPlaygroundOptions[K],
+  ) => {
+    setOptions((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleChangeSwiperSlide = (swiper: SwiperInstance) => {
+    setActiveIndex(swiper.realIndex);
+    addEventLog("onSlideChange", { realIndex: swiper.realIndex });
+  };
+
+  const handleChangeActiveIndex = (nextValue: string) => {
+    const nextIndex = Number(nextValue);
+    setActiveIndex(nextIndex);
+    if (swiperInstance && !swiperInstance.destroyed) {
+      swiperInstance.slideToLoop(nextIndex);
+    }
+  };
+
+  const handleClickReset = () => {
+    setOptions(DEFAULT_PLAYGROUND_OPTIONS);
+    setActiveIndex(0);
+    if (swiperInstance && !swiperInstance.destroyed) {
+      swiperInstance.slideToLoop(0, 0);
+    }
+    clearEventLogs();
+  };
+
+  const controls: GuidePlaygroundControl[] = [
+    {
+      name: "navigation",
+      type: "boolean",
+      description: "이전/다음 버튼 (Navigation 모듈 필요)",
+      control: (
+        <PlaygroundSwitchControl
+          label="navigation"
+          checked={options.isNavigation}
+          onCheckedChange={(checked) =>
+            handleChangeOption("isNavigation", checked)
+          }
+        />
+      ),
+    },
+    {
+      name: "pagination",
+      type: "{ clickable: true }",
+      description: "하단 점 페이지네이션 (SwiperPagination 모듈 필요)",
+      control: (
+        <PlaygroundSwitchControl
+          label="pagination"
+          checked={options.isPagination}
+          onCheckedChange={(checked) =>
+            handleChangeOption("isPagination", checked)
+          }
+        />
+      ),
+    },
+    {
+      name: "loop",
+      type: "boolean",
+      description: "마지막 다음에 처음으로 이어짐",
+      control: (
+        <PlaygroundSwitchControl
+          label="loop"
+          checked={options.isLoop}
+          onCheckedChange={(checked) => handleChangeOption("isLoop", checked)}
+        />
+      ),
+    },
+    {
+      name: "autoplay",
+      type: `{ delay: ${AUTOPLAY_DELAY}, disableOnInteraction: false }`,
+      description: "자동 재생 (Autoplay 모듈 필요)",
+      control: (
+        <PlaygroundSwitchControl
+          label="autoplay"
+          checked={options.isAutoplay}
+          onCheckedChange={(checked) =>
+            handleChangeOption("isAutoplay", checked)
+          }
+        />
+      ),
+    },
+    {
+      name: "centeredSlides",
+      type: "boolean",
+      description: "활성 슬라이드를 가운데 배치 (slidesPerView가 1보다 클 때 의미 있음)",
+      control: (
+        <PlaygroundSwitchControl
+          label="centeredSlides"
+          checked={options.isCenteredSlides}
+          onCheckedChange={(checked) =>
+            handleChangeOption("isCenteredSlides", checked)
+          }
+        />
+      ),
+    },
+    {
+      name: "slidesPerView",
+      type: "number",
+      description: "한 화면에 보이는 슬라이드 수 (소수면 옆 슬라이드가 살짝 보임)",
+      control: (
+        <PlaygroundRadioControl
+          label="slidesPerView"
+          value={options.slidesPerView}
+          options={SLIDES_PER_VIEW_OPTIONS}
+          onValueChange={(next) => handleChangeOption("slidesPerView", next)}
+        />
+      ),
+    },
+    {
+      name: "spaceBetween",
+      type: "number",
+      description: "슬라이드 사이 간격(px)",
+      control: (
+        <PlaygroundRadioControl
+          label="spaceBetween"
+          value={options.spaceBetween}
+          options={SPACE_BETWEEN_OPTIONS}
+          onValueChange={(next) => handleChangeOption("spaceBetween", next)}
+        />
+      ),
+    },
+    {
+      name: "activeIndex",
+      type: "number (swiper.realIndex)",
+      description:
+        "현재 슬라이드. 고르면 swiper.slideToLoop(index)로 이동하고, 미리보기를 넘기면 onSlideChange로 함께 바뀝니다.",
+      control: (
+        <PlaygroundRadioControl
+          label="activeIndex"
+          value={String(activeIndex)}
+          options={PLAYGROUND_SLIDES.map((_, index) => String(index))}
+          onValueChange={handleChangeActiveIndex}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <GuidePlayground
+      description="Controls에서 Props를 바꾸면 미리보기와 코드가 바로 바뀝니다. 옵션을 바꾸면 Swiper를 다시 초기화하며, 현재 슬라이드 위치는 initialSlide로 유지합니다."
+      code={buildPlaygroundCode(options)}
+      controls={controls}
+      controlsNote="Swiper는 value/onChange 방식의 제어형 Props가 없어 activeIndex는 인스턴스(onSwiper) 메서드로 맞춥니다. scrollbar·keyboard·breakpoints·autoHeight 등 나머지 옵션은 Samples 탭 예시를 참고하세요."
+      state={{
+        activeIndex,
+        navigation: options.isNavigation,
+        pagination: options.isPagination,
+        loop: options.isLoop,
+        autoplay: options.isAutoplay,
+        centeredSlides: options.isCenteredSlides,
+        slidesPerView: Number(options.slidesPerView),
+        spaceBetween: Number(options.spaceBetween),
+      }}
+      eventLogs={eventLogs}
+      onReset={handleClickReset}
+    >
+      <div className="w-full min-w-0 overflow-hidden">
+        <Swiper
+          key={swiperKey}
+          modules={modules}
+          navigation={options.isNavigation}
+          pagination={options.isPagination ? { clickable: true } : false}
+          loop={options.isLoop}
+          autoplay={
+            options.isAutoplay
+              ? { delay: AUTOPLAY_DELAY, disableOnInteraction: false }
+              : false
+          }
+          centeredSlides={options.isCenteredSlides}
+          slidesPerView={Number(options.slidesPerView)}
+          spaceBetween={Number(options.spaceBetween)}
+          initialSlide={activeIndex}
+          onSwiper={setSwiperInstance}
+          onSlideChange={handleChangeSwiperSlide}
+          className="w-full min-w-0"
+        >
+          {PLAYGROUND_SLIDES.map((slide, index) => (
+            <SwiperSlide key={slide.id}>
+              <div className="bg-container flex h-44 flex-col items-center justify-center rounded-md border border-line02 p-6 text-center">
+                <p className="text-font-g text-xs">#{index}</p>
+                <h3 className="text-font-b text-xl font-bold">{slide.title}</h3>
+              </div>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      </div>
+    </GuidePlayground>
+  );
+}
 
 const slides = [
   { id: "s1", title: "Slide 1", desc: "기본 슬라이드입니다." },
@@ -145,10 +436,11 @@ function SampleSwiperPage() {
     <div className="guide-layout">
       <h1 className="guide-title">Swiper</h1>
       <div className="guide-content">
-        <GuideBox
-          title="기본형 (Navigation / Pagination / Scrollbar)"
-          description="가장 자주 쓰는 기본 조합입니다. 버튼 이동, 페이지네이션 클릭, 드래그 스크롤이 동시에 동작합니다."
-          code={`
+        <GuideSampleTabs playground={<SwiperPlayground />}>
+          <GuideBox
+            title="기본형 (Navigation / Pagination / Scrollbar)"
+            description="가장 자주 쓰는 기본 조합입니다. 버튼 이동, 페이지네이션 클릭, 드래그 스크롤이 동시에 동작합니다."
+            code={`
 import {
   Navigation,
   Scrollbar,
@@ -169,44 +461,44 @@ import {
   <SwiperSlide>Slide 1</SwiperSlide>
   <SwiperSlide>Slide 2</SwiperSlide>
 </Swiper>
-          `}
-        >
-          <div className="w-full min-w-0 overflow-hidden">
-            <Swiper
-              modules={[Navigation, SwiperPagination, Scrollbar]}
-              navigation
-              pagination={{ clickable: true }}
-              scrollbar={{ draggable: true }}
-              loop
-              spaceBetween={16}
-              slidesPerView={1}
-              className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
-            >
-              {slides.map((slide) => (
-                <SwiperSlide key={slide.id}>
-                  <div className="bg-container flex h-56 flex-col items-center justify-center rounded-md border border-line02 p-6 text-center">
-                    <h2 className="text-font-b mb-2 text-xl font-bold">
-                      {slide.title}
-                    </h2>
-                    <p className="text-font-g text-sm">{slide.desc}</p>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-        </GuideBox>
+            `}
+          >
+            <div className="w-full min-w-0 overflow-hidden">
+              <Swiper
+                modules={[Navigation, SwiperPagination, Scrollbar]}
+                navigation
+                pagination={{ clickable: true }}
+                scrollbar={{ draggable: true }}
+                loop
+                spaceBetween={16}
+                slidesPerView={1}
+                className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
+              >
+                {slides.map((slide) => (
+                  <SwiperSlide key={slide.id}>
+                    <div className="bg-container flex h-56 flex-col items-center justify-center rounded-md border border-line02 p-6 text-center">
+                      <h2 className="text-font-b mb-2 text-xl font-bold">
+                        {slide.title}
+                      </h2>
+                      <p className="text-font-g text-sm">{slide.desc}</p>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="자동 재생 (Autoplay)"
-          description={
-            <>
-              `Autoplay` 모듈과 `autoplay` 옵션으로 일정 간격 자동 전환을
-              켭니다. `disableOnInteraction: false`면 사용자가 슬라이드를 만진
-              뒤에도 자동 재생이 이어지고, `pauseOnMouseEnter`로 호버 시 잠시
-              멈출 수 있습니다.
-            </>
-          }
-          code={`
+          <GuideBox
+            title="자동 재생 (Autoplay)"
+            description={
+              <>
+                `Autoplay` 모듈과 `autoplay` 옵션으로 일정 간격 자동 전환을
+                켭니다. `disableOnInteraction: false`면 사용자가 슬라이드를 만진
+                뒤에도 자동 재생이 이어지고, `pauseOnMouseEnter`로 호버 시 잠시
+                멈출 수 있습니다.
+              </>
+            }
+            code={`
 import {
   Autoplay,
   Navigation,
@@ -232,51 +524,51 @@ import {
     <SwiperSlide key={slide.id}>...</SwiperSlide>
   ))}
 </Swiper>
-          `}
-        >
-          <div className="w-full min-w-0 overflow-hidden">
-            <Swiper
-              modules={[Autoplay, Navigation, SwiperPagination]}
-              loop
-              autoplay={{
-                delay: 2800,
-                disableOnInteraction: false,
-                pauseOnMouseEnter: true,
-              }}
-              navigation
-              pagination={{ clickable: true }}
-              spaceBetween={16}
-              slidesPerView={1}
-              className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
-            >
-              {slides.map((slide) => (
-                <SwiperSlide key={`${slide.id}-autoplay`}>
-                  <div className="bg-container flex h-48 flex-col items-center justify-center rounded-md border border-line02 p-6 text-center">
-                    <p className="text-font-g mb-1 text-xs font-medium uppercase tracking-wide">
-                      Autoplay
-                    </p>
-                    <h2 className="text-font-b mb-2 text-xl font-bold">
-                      {slide.title}
-                    </h2>
-                    <p className="text-font-g text-sm">{slide.desc}</p>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-        </GuideBox>
+            `}
+          >
+            <div className="w-full min-w-0 overflow-hidden">
+              <Swiper
+                modules={[Autoplay, Navigation, SwiperPagination]}
+                loop
+                autoplay={{
+                  delay: 2800,
+                  disableOnInteraction: false,
+                  pauseOnMouseEnter: true,
+                }}
+                navigation
+                pagination={{ clickable: true }}
+                spaceBetween={16}
+                slidesPerView={1}
+                className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
+              >
+                {slides.map((slide) => (
+                  <SwiperSlide key={`${slide.id}-autoplay`}>
+                    <div className="bg-container flex h-48 flex-col items-center justify-center rounded-md border border-line02 p-6 text-center">
+                      <p className="text-font-g mb-1 text-xs font-medium uppercase tracking-wide">
+                        Autoplay
+                      </p>
+                      <h2 className="text-font-b mb-2 text-xl font-bold">
+                        {slide.title}
+                      </h2>
+                      <p className="text-font-g text-sm">{slide.desc}</p>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="외부 버튼으로 Autoplay 토글 (재생 / 정지 아이콘)"
-          description={
-            <>
-              한 버튼으로 토글합니다. 재생 중에는 정지(Square), 정지 중에는
-              재생(Play) 아이콘이 보이며, `autoplay.stop()` /
-              `autoplay.start()`와 `onAutoplayStart`·`onAutoplayStop`으로 상태를
-              맞춥니다.
-            </>
-          }
-          code={`
+          <GuideBox
+            title="외부 버튼으로 Autoplay 토글 (재생 / 정지 아이콘)"
+            description={
+              <>
+                한 버튼으로 토글합니다. 재생 중에는 정지(Square), 정지 중에는
+                재생(Play) 아이콘이 보이며, `autoplay.stop()` /
+                `autoplay.start()`와 `onAutoplayStart`·`onAutoplayStop`으로 상태를
+                맞춥니다.
+              </>
+            }
+            code={`
 import { useState } from "react";
 import { Play, Square } from "lucide-react";
 import {
@@ -315,77 +607,77 @@ const [autoplayRunning, setAutoplayRunning] = useState(true);
 >
   ...
 </Swiper>
-          `}
-        >
-          <div className="mb-3 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              className="text-font-b inline-flex h-10 w-10 items-center justify-center rounded-md border border-line02 bg-container hover:bg-base"
-              aria-label={
-                autoplayExternalRunning ? "자동재생 정지" : "자동재생 시작"
-              }
-              onClick={() => {
-                const ap = autoplayExternalSwiper?.autoplay;
-                if (!ap) return;
-                if (autoplayExternalRunning) ap.stop();
-                else ap.start();
-              }}
-            >
-              {autoplayExternalRunning ? (
-                <Square className="h-5 w-5" aria-hidden />
-              ) : (
-                <Play className="h-5 w-5" aria-hidden />
-              )}
-            </button>
-            <span className="text-font-g text-sm">
-              {autoplayExternalRunning
-                ? "재생 중 — 정지하려면 버튼"
-                : "정지됨 — 재생하려면 버튼"}
-            </span>
-          </div>
-          <div className="w-full min-w-0 overflow-hidden">
-            <Swiper
-              modules={[Autoplay, Navigation, SwiperPagination]}
-              loop
-              autoplay={{ delay: 3000, disableOnInteraction: false }}
-              navigation
-              pagination={{ clickable: true }}
-              spaceBetween={16}
-              slidesPerView={1}
-              onSwiper={(instance) => {
-                setAutoplayExternalSwiper(instance);
-                setAutoplayExternalRunning(instance.autoplay?.running ?? false);
-              }}
-              onAutoplayStart={() => setAutoplayExternalRunning(true)}
-              onAutoplayStop={() => setAutoplayExternalRunning(false)}
-              className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
-            >
-              {slides.map((slide) => (
-                <SwiperSlide key={`${slide.id}-autoplay-toggle`}>
-                  <div className="bg-container flex h-44 flex-col items-center justify-center rounded-md border border-line02 p-6 text-center">
-                    <p className="text-font-g mb-1 text-xs font-medium uppercase tracking-wide">
-                      Autoplay 외부 제어
-                    </p>
-                    <h2 className="text-font-b mb-2 text-xl font-bold">
-                      {slide.title}
-                    </h2>
-                    <p className="text-font-g text-sm">{slide.desc}</p>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-        </GuideBox>
+            `}
+          >
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="text-font-b inline-flex h-10 w-10 items-center justify-center rounded-md border border-line02 bg-container hover:bg-base"
+                aria-label={
+                  autoplayExternalRunning ? "자동재생 정지" : "자동재생 시작"
+                }
+                onClick={() => {
+                  const ap = autoplayExternalSwiper?.autoplay;
+                  if (!ap) return;
+                  if (autoplayExternalRunning) ap.stop();
+                  else ap.start();
+                }}
+              >
+                {autoplayExternalRunning ? (
+                  <Square className="h-5 w-5" aria-hidden />
+                ) : (
+                  <Play className="h-5 w-5" aria-hidden />
+                )}
+              </button>
+              <span className="text-font-g text-sm">
+                {autoplayExternalRunning
+                  ? "재생 중 — 정지하려면 버튼"
+                  : "정지됨 — 재생하려면 버튼"}
+              </span>
+            </div>
+            <div className="w-full min-w-0 overflow-hidden">
+              <Swiper
+                modules={[Autoplay, Navigation, SwiperPagination]}
+                loop
+                autoplay={{ delay: 3000, disableOnInteraction: false }}
+                navigation
+                pagination={{ clickable: true }}
+                spaceBetween={16}
+                slidesPerView={1}
+                onSwiper={(instance) => {
+                  setAutoplayExternalSwiper(instance);
+                  setAutoplayExternalRunning(instance.autoplay?.running ?? false);
+                }}
+                onAutoplayStart={() => setAutoplayExternalRunning(true)}
+                onAutoplayStop={() => setAutoplayExternalRunning(false)}
+                className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
+              >
+                {slides.map((slide) => (
+                  <SwiperSlide key={`${slide.id}-autoplay-toggle`}>
+                    <div className="bg-container flex h-44 flex-col items-center justify-center rounded-md border border-line02 p-6 text-center">
+                      <p className="text-font-g mb-1 text-xs font-medium uppercase tracking-wide">
+                        Autoplay 외부 제어
+                      </p>
+                      <h2 className="text-font-b mb-2 text-xl font-bold">
+                        {slide.title}
+                      </h2>
+                      <p className="text-font-g text-sm">{slide.desc}</p>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="반응형 + 자동 재생 + 키보드 이동"
-          description={
-            <>
-              화면 크기에 따라 `slidesPerView`를 변경하고, 자동 재생과 키보드
-              좌/우 이동을 함께 사용합니다.
-            </>
-          }
-          code={`
+          <GuideBox
+            title="반응형 + 자동 재생 + 키보드 이동"
+            description={
+              <>
+                화면 크기에 따라 `slidesPerView`를 변경하고, 자동 재생과 키보드
+                좌/우 이동을 함께 사용합니다.
+              </>
+            }
+            code={`
 import {
   Autoplay,
   Keyboard,
@@ -409,46 +701,46 @@ import {
     <SwiperSlide key={item.id}>...</SwiperSlide>
   ))}
 </Swiper>
-          `}
-        >
-          <div className="w-full min-w-0 overflow-hidden">
-            <Swiper
-              modules={[Autoplay, SwiperPagination, Keyboard]}
-              autoplay={{ delay: 2200, disableOnInteraction: false }}
-              pagination={{ clickable: true }}
-              keyboard={{ enabled: true }}
-              breakpoints={{
-                0: { slidesPerView: 1, spaceBetween: 12 },
-                768: { slidesPerView: 2, spaceBetween: 16 },
-                1200: { slidesPerView: 3, spaceBetween: 20 },
-              }}
-              className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
-            >
-              {productSlides.map((item) => (
-                <SwiperSlide key={item.id}>
-                  <div className="flex h-44 flex-col justify-between rounded-md border border-line02 bg-container p-4">
-                    <span
-                      className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-semibold ${item.color}`}
-                    >
-                      PRODUCT
-                    </span>
-                    <p className="text-font-b text-lg font-semibold">
-                      {item.name}
-                    </p>
-                    <p className="text-font-g text-sm">
-                      반응형 카드 슬라이드 + autoplay + keyboard 예시
-                    </p>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-        </GuideBox>
+            `}
+          >
+            <div className="w-full min-w-0 overflow-hidden">
+              <Swiper
+                modules={[Autoplay, SwiperPagination, Keyboard]}
+                autoplay={{ delay: 2200, disableOnInteraction: false }}
+                pagination={{ clickable: true }}
+                keyboard={{ enabled: true }}
+                breakpoints={{
+                  0: { slidesPerView: 1, spaceBetween: 12 },
+                  768: { slidesPerView: 2, spaceBetween: 16 },
+                  1200: { slidesPerView: 3, spaceBetween: 20 },
+                }}
+                className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
+              >
+                {productSlides.map((item) => (
+                  <SwiperSlide key={item.id}>
+                    <div className="flex h-44 flex-col justify-between rounded-md border border-line02 bg-container p-4">
+                      <span
+                        className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-semibold ${item.color}`}
+                      >
+                        PRODUCT
+                      </span>
+                      <p className="text-font-b text-lg font-semibold">
+                        {item.name}
+                      </p>
+                      <p className="text-font-g text-sm">
+                        반응형 카드 슬라이드 + autoplay + keyboard 예시
+                      </p>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="외부 컨트롤 + 현재 인덱스 표시 (제어형)"
-          description="Swiper 인스턴스를 받아 외부 버튼으로 이동을 제어하고, 현재 활성 슬라이드 인덱스를 별도로 표시합니다."
-          code={`
+          <GuideBox
+            title="외부 컨트롤 + 현재 인덱스 표시 (제어형)"
+            description="Swiper 인스턴스를 받아 외부 버튼으로 이동을 제어하고, 현재 활성 슬라이드 인덱스를 별도로 표시합니다."
+            code={`
 import { useState } from "react";
 import {
   Swiper,
@@ -473,66 +765,66 @@ const [controlledSwiper, setControlledSwiper] =
 >
   ...
 </Swiper>
-          `}
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="rounded-md border border-line02 px-3 py-1.5 text-sm font-medium"
-              onClick={() => controlledSwiper?.slidePrev()}
-            >
-              이전
-            </button>
-            <button
-              type="button"
-              className="rounded-md border border-line02 px-3 py-1.5 text-sm font-medium"
-              onClick={() => controlledSwiper?.slideNext()}
-            >
-              다음
-            </button>
-            <button
-              type="button"
-              className="rounded-md border border-line02 px-3 py-1.5 text-sm font-medium"
-              onClick={() => controlledSwiper?.slideTo(0)}
-            >
-              첫 슬라이드
-            </button>
-            <span className="text-font-g ml-2 text-sm">
-              현재 인덱스: {controlledIndex + 1} / {slides.length}
-            </span>
-          </div>
+            `}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="rounded-md border border-line02 px-3 py-1.5 text-sm font-medium"
+                onClick={() => controlledSwiper?.slidePrev()}
+              >
+                이전
+              </button>
+              <button
+                type="button"
+                className="rounded-md border border-line02 px-3 py-1.5 text-sm font-medium"
+                onClick={() => controlledSwiper?.slideNext()}
+              >
+                다음
+              </button>
+              <button
+                type="button"
+                className="rounded-md border border-line02 px-3 py-1.5 text-sm font-medium"
+                onClick={() => controlledSwiper?.slideTo(0)}
+              >
+                첫 슬라이드
+              </button>
+              <span className="text-font-g ml-2 text-sm">
+                현재 인덱스: {controlledIndex + 1} / {slides.length}
+              </span>
+            </div>
 
-          <div className="w-full min-w-0 overflow-hidden">
-            <Swiper
-              modules={[SwiperPagination]}
-              onSwiper={setControlledSwiper}
-              onSlideChange={(swiper) => setControlledIndex(swiper.realIndex)}
-              pagination={{ clickable: true }}
-              spaceBetween={16}
-              slidesPerView={1}
-              className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
-            >
-              {slides.map((slide, index) => (
-                <SwiperSlide key={`${slide.id}-controlled`}>
-                  <div className="bg-container flex h-44 items-center justify-center rounded-md border border-line02 p-6 text-center">
-                    <div>
-                      <p className="text-font-g text-xs">#{index + 1}</p>
-                      <h3 className="text-font-b text-xl font-bold">
-                        {slide.title}
-                      </h3>
-                      <p className="text-font-g text-sm">{slide.desc}</p>
+            <div className="w-full min-w-0 overflow-hidden">
+              <Swiper
+                modules={[SwiperPagination]}
+                onSwiper={setControlledSwiper}
+                onSlideChange={(swiper) => setControlledIndex(swiper.realIndex)}
+                pagination={{ clickable: true }}
+                spaceBetween={16}
+                slidesPerView={1}
+                className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
+              >
+                {slides.map((slide, index) => (
+                  <SwiperSlide key={`${slide.id}-controlled`}>
+                    <div className="bg-container flex h-44 items-center justify-center rounded-md border border-line02 p-6 text-center">
+                      <div>
+                        <p className="text-font-g text-xs">#{index + 1}</p>
+                        <h3 className="text-font-b text-xl font-bold">
+                          {slide.title}
+                        </h3>
+                        <p className="text-font-g text-sm">{slide.desc}</p>
+                      </div>
                     </div>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-        </GuideBox>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="이전/다음 + Pagination 별도 영역 배치"
-          description="네비게이션 버튼과 Pagination을 슬라이더 하단의 별도 컨트롤 바에 배치하는 패턴입니다."
-          code={`
+          <GuideBox
+            title="이전/다음 + Pagination 별도 영역 배치"
+            description="네비게이션 버튼과 Pagination을 슬라이더 하단의 별도 컨트롤 바에 배치하는 패턴입니다."
+            code={`
 import { useRef, useState } from "react";
 import {
   Navigation,
@@ -580,92 +872,92 @@ const [externalSwiper, setExternalSwiper] =
   <div ref={paginationRef} />
   <button ref={nextRef}>다음</button>
 </div>
-          `}
-        >
-          <div className="w-full min-w-0 overflow-hidden">
-            <Swiper
-              modules={[Navigation, SwiperPagination]}
-              onSwiper={(swiper) => setExternalControlsSwiper(swiper)}
-              onBeforeInit={(swiper) => {
-                const navigation = swiper.params.navigation;
-                const pagination = swiper.params.pagination;
+            `}
+          >
+            <div className="w-full min-w-0 overflow-hidden">
+              <Swiper
+                modules={[Navigation, SwiperPagination]}
+                onSwiper={(swiper) => setExternalControlsSwiper(swiper)}
+                onBeforeInit={(swiper) => {
+                  const navigation = swiper.params.navigation;
+                  const pagination = swiper.params.pagination;
 
-                // React Swiper에서 `navigation` prop을 boolean으로 넘기면
-                // swiper.params.navigation 자체가 boolean일 수 있습니다.
-                // 이 경우에도 prevEl/nextEl을 객체로 덮어써서 외부 DOM에 바인딩합니다.
-                if (externalPrevRef.current || externalNextRef.current) {
-                  const navigationObj =
-                    navigation && typeof navigation === "object"
-                      ? navigation
-                      : {};
-                  swiper.params.navigation = {
-                    ...navigationObj,
-                    prevEl: externalPrevRef.current,
-                    nextEl: externalNextRef.current,
-                  };
-                }
+                  // React Swiper에서 `navigation` prop을 boolean으로 넘기면
+                  // swiper.params.navigation 자체가 boolean일 수 있습니다.
+                  // 이 경우에도 prevEl/nextEl을 객체로 덮어써서 외부 DOM에 바인딩합니다.
+                  if (externalPrevRef.current || externalNextRef.current) {
+                    const navigationObj =
+                      navigation && typeof navigation === "object"
+                        ? navigation
+                        : {};
+                    swiper.params.navigation = {
+                      ...navigationObj,
+                      prevEl: externalPrevRef.current,
+                      nextEl: externalNextRef.current,
+                    };
+                  }
 
-                if (externalPaginationRef.current) {
-                  const paginationObj =
-                    pagination && typeof pagination === "object"
-                      ? pagination
-                      : {};
-                  swiper.params.pagination = {
-                    ...paginationObj,
-                    el: externalPaginationRef.current,
-                  };
-                }
-              }}
-              onInit={(swiper) => {
-                swiper.navigation.init();
-                swiper.navigation.update();
-                swiper.pagination.init();
-                swiper.pagination.render();
-                swiper.pagination.update();
-              }}
-              spaceBetween={16}
-              slidesPerView={1}
-              className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
-            >
-              {slides.map((slide) => (
-                <SwiperSlide key={`${slide.id}-external-controls`}>
-                  <div className="bg-container flex h-44 flex-col items-center justify-center rounded-md border border-line02 p-6 text-center">
-                    <h3 className="text-font-b text-xl font-bold">
-                      {slide.title}
-                    </h3>
-                    <p className="text-font-g text-sm">{slide.desc}</p>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
+                  if (externalPaginationRef.current) {
+                    const paginationObj =
+                      pagination && typeof pagination === "object"
+                        ? pagination
+                        : {};
+                    swiper.params.pagination = {
+                      ...paginationObj,
+                      el: externalPaginationRef.current,
+                    };
+                  }
+                }}
+                onInit={(swiper) => {
+                  swiper.navigation.init();
+                  swiper.navigation.update();
+                  swiper.pagination.init();
+                  swiper.pagination.render();
+                  swiper.pagination.update();
+                }}
+                spaceBetween={16}
+                slidesPerView={1}
+                className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
+              >
+                {slides.map((slide) => (
+                  <SwiperSlide key={`${slide.id}-external-controls`}>
+                    <div className="bg-container flex h-44 flex-col items-center justify-center rounded-md border border-line02 p-6 text-center">
+                      <h3 className="text-font-b text-xl font-bold">
+                        {slide.title}
+                      </h3>
+                      <p className="text-font-g text-sm">{slide.desc}</p>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
 
-          <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-line02 bg-container p-2">
-            <button
-              ref={externalPrevRef}
-              type="button"
-              className="rounded-md border border-line02 px-3 py-1.5 text-sm font-medium"
-            >
-              이전
-            </button>
-            <div
-              ref={externalPaginationRef}
-              className="[&_.swiper-pagination-bullet]:mx-1 [&_.swiper-pagination-bullet]:h-2 [&_.swiper-pagination-bullet]:w-2 [&_.swiper-pagination-bullet-active]:bg-font-b"
-            />
-            <button
-              ref={externalNextRef}
-              type="button"
-              className="rounded-md border border-line02 px-3 py-1.5 text-sm font-medium"
-            >
-              다음
-            </button>
-          </div>
-        </GuideBox>
+            <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-line02 bg-container p-2">
+              <button
+                ref={externalPrevRef}
+                type="button"
+                className="rounded-md border border-line02 px-3 py-1.5 text-sm font-medium"
+              >
+                이전
+              </button>
+              <div
+                ref={externalPaginationRef}
+                className="[&_.swiper-pagination-bullet]:mx-1 [&_.swiper-pagination-bullet]:h-2 [&_.swiper-pagination-bullet]:w-2 [&_.swiper-pagination-bullet-active]:bg-font-b"
+              />
+              <button
+                ref={externalNextRef}
+                type="button"
+                className="rounded-md border border-line02 px-3 py-1.5 text-sm font-medium"
+              >
+                다음
+              </button>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="슬라이드별 높이 상이 + 자동 높이 조절"
-          description="슬라이드마다 콘텐츠 높이가 달라도 `autoHeight`를 켜면 활성 슬라이드 높이에 맞춰 컨테이너가 자연스럽게 조절됩니다."
-          code={`
+          <GuideBox
+            title="슬라이드별 높이 상이 + 자동 높이 조절"
+            description="슬라이드마다 콘텐츠 높이가 달라도 `autoHeight`를 켜면 활성 슬라이드 높이에 맞춰 컨테이너가 자연스럽게 조절됩니다."
+            code={`
 import {
   Navigation,
   Swiper,
@@ -685,45 +977,45 @@ import {
     <SwiperSlide key={slide.id}>...</SwiperSlide>
   ))}
 </Swiper>
-          `}
-        >
-          <div className="w-full min-w-0 overflow-hidden">
-            <Swiper
-              modules={[Navigation, SwiperPagination]}
-              navigation
-              pagination={{ clickable: true }}
-              autoHeight
-              spaceBetween={16}
-              slidesPerView={1}
-              className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
-            >
-              {variableHeightSlides.map((slide) => (
-                <SwiperSlide key={slide.id}>
-                  <div className="rounded-md border border-line02 bg-container p-5">
-                    <h3 className="text-font-b mb-3 text-lg font-semibold">
-                      {slide.title}
-                    </h3>
-                    <div className="space-y-2">
-                      {slide.lines.map((line, index) => (
-                        <p
-                          key={`${slide.id}-${index}`}
-                          className="text-font-g text-sm"
-                        >
-                          {line}
-                        </p>
-                      ))}
+            `}
+          >
+            <div className="w-full min-w-0 overflow-hidden">
+              <Swiper
+                modules={[Navigation, SwiperPagination]}
+                navigation
+                pagination={{ clickable: true }}
+                autoHeight
+                spaceBetween={16}
+                slidesPerView={1}
+                className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
+              >
+                {variableHeightSlides.map((slide) => (
+                  <SwiperSlide key={slide.id}>
+                    <div className="rounded-md border border-line02 bg-container p-5">
+                      <h3 className="text-font-b mb-3 text-lg font-semibold">
+                        {slide.title}
+                      </h3>
+                      <div className="space-y-2">
+                        {slide.lines.map((line, index) => (
+                          <p
+                            key={`${slide.id}-${index}`}
+                            className="text-font-g text-sm"
+                          >
+                            {line}
+                          </p>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-        </GuideBox>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="인접 슬라이드 미묘 노출(피크/Peek)"
-          description="이전/다음 슬라이드가 살짝 보이는 느낌의 UX를 만들기 위해 `slidesPerView`를 소수로 두고 `centeredSlides`를 사용합니다."
-          code={`
+          <GuideBox
+            title="인접 슬라이드 미묘 노출(피크/Peek)"
+            description="이전/다음 슬라이드가 살짝 보이는 느낌의 UX를 만들기 위해 `slidesPerView`를 소수로 두고 `centeredSlides`를 사용합니다."
+            code={`
 import {
   Navigation,
   Swiper,
@@ -743,38 +1035,38 @@ import {
 >
   ...
 </Swiper>
-          `}
-        >
-          <div className="w-full min-w-0 overflow-hidden">
-            <Swiper
-              modules={[Navigation, SwiperPagination]}
-              navigation
-              pagination={{ clickable: true }}
-              loop
-              centeredSlides
-              grabCursor
-              slidesPerView={1.2}
-              spaceBetween={16}
-              className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
-            >
-              {peekSlides.map((slide) => (
-                <SwiperSlide key={slide.id}>
-                  <div className="rounded-md border border-line02 bg-container p-5">
-                    <h3 className="text-font-b text-lg font-semibold">
-                      {slide.title}
-                    </h3>
-                    <p className="mt-2 text-font-g text-sm">{slide.desc}</p>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-        </GuideBox>
+            `}
+          >
+            <div className="w-full min-w-0 overflow-hidden">
+              <Swiper
+                modules={[Navigation, SwiperPagination]}
+                navigation
+                pagination={{ clickable: true }}
+                loop
+                centeredSlides
+                grabCursor
+                slidesPerView={1.2}
+                spaceBetween={16}
+                className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
+              >
+                {peekSlides.map((slide) => (
+                  <SwiperSlide key={slide.id}>
+                    <div className="rounded-md border border-line02 bg-container p-5">
+                      <h3 className="text-font-b text-lg font-semibold">
+                        {slide.title}
+                      </h3>
+                      <p className="mt-2 text-font-g text-sm">{slide.desc}</p>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+          </GuideBox>
 
-        <GuideBox
-          title="우측만 미묘 노출(Peek Only Right)"
-          description="`centeredSlides`를 끄고 `slidesPerView`를 소수로 두면, 현재 슬라이드를 좌측 기준으로 배치해서 우측 다음 슬라이드만 살짝 보이게 만들 수 있습니다."
-          code={`
+          <GuideBox
+            title="우측만 미묘 노출(Peek Only Right)"
+            description="`centeredSlides`를 끄고 `slidesPerView`를 소수로 두면, 현재 슬라이드를 좌측 기준으로 배치해서 우측 다음 슬라이드만 살짝 보이게 만들 수 있습니다."
+            code={`
 import {
   Navigation,
   Swiper,
@@ -793,32 +1085,33 @@ import {
 >
   ...
 </Swiper>
-          `}
-        >
-          <div className="w-full min-w-0 overflow-hidden">
-            <Swiper
-              modules={[Navigation, SwiperPagination]}
-              navigation
-              pagination={{ clickable: true }}
-              loop
-              grabCursor
-              slidesPerView={1.2}
-              spaceBetween={16}
-              className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
-            >
-              {peekSlides.map((slide) => (
-                <SwiperSlide key={`${slide.id}-right-peek`}>
-                  <div className="rounded-md border border-line02 bg-container p-5">
-                    <h3 className="text-font-b text-lg font-semibold">
-                      {slide.title}
-                    </h3>
-                    <p className="mt-2 text-font-g text-sm">{slide.desc}</p>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-        </GuideBox>
+            `}
+          >
+            <div className="w-full min-w-0 overflow-hidden">
+              <Swiper
+                modules={[Navigation, SwiperPagination]}
+                navigation
+                pagination={{ clickable: true }}
+                loop
+                grabCursor
+                slidesPerView={1.2}
+                spaceBetween={16}
+                className="w-full min-w-0 rounded-lg border border-line02 bg-base p-2"
+              >
+                {peekSlides.map((slide) => (
+                  <SwiperSlide key={`${slide.id}-right-peek`}>
+                    <div className="rounded-md border border-line02 bg-container p-5">
+                      <h3 className="text-font-b text-lg font-semibold">
+                        {slide.title}
+                      </h3>
+                      <p className="mt-2 text-font-g text-sm">{slide.desc}</p>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+          </GuideBox>
+        </GuideSampleTabs>
       </div>
     </div>
   );

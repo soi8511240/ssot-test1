@@ -1,6 +1,6 @@
 # Collapsible
 
-> 파일: `src/components/ui/Collapsible/Collapsible.tsx` (+ `Collapsible.variants.ts`, `Collapsible.module.scss`) · 가이드: `/guide/collapsible`
+> 파일: `src/components/ui/Collapsible/Collapsible.tsx` (+ `Collapsible.variants.ts`, `Collapsible.module.scss`) · 가이드: `/guide/collapsible` (Samples · Playground 탭)
 > 기준: 템플릿 코드 (2026-11-25). 규칙: `AGENTS.md` 5.1.1
 
 ```tsx

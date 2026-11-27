@@ -5,7 +5,369 @@ import {
   type DateRange,
 } from "@/components/ui";
 import * as React from "react";
+import { format, isValid, parse } from "date-fns";
+
+import { Input } from "@/components/ui";
 import { GuideBox } from "@/publish/guide/GuideBox";
+import {
+  GuidePlayground,
+  GuideSampleTabs,
+  PlaygroundRadioControl,
+  PlaygroundSwitchControl,
+  PlaygroundTextControl,
+  type GuidePlaygroundControl,
+} from "@/publish/guide/GuidePlayground";
+import { useGuideEventLog } from "@/publish/guide/useGuideEventLog";
+
+type DatePickerVariant = "default" | "btnType";
+type DatePickerAlign = "start" | "center" | "end";
+type DatePickerSide = "top" | "right" | "bottom" | "left";
+type DisabledDaysPreset = "none" | "beforeToday" | "weekend";
+
+const VALUE_FORMAT = "yyyy-MM-dd";
+const DEFAULT_PLACEHOLDER = "날짜를 선택하세요";
+const DEFAULT_FORMAT_STRING = "yyyy.MM.dd";
+const FORMAT_STRINGS = ["yyyy.MM.dd", "yyyy-MM-dd", "yyyy년 MM월 dd일"];
+
+const DISABLED_DAYS_OPTIONS = [
+  { value: "none", label: "없음" },
+  { value: "beforeToday", label: "오늘 이전" },
+  { value: "weekend", label: "주말" },
+];
+
+const DISABLED_DAYS_CODE: Record<DisabledDaysPreset, string> = {
+  none: "",
+  beforeToday: "calendarProps={{ disabled: { before: new Date() } }}",
+  weekend:
+    "calendarProps={{ disabled: (date) => date.getDay() === 0 || date.getDay() === 6 }}",
+};
+
+/** 미리 정한 선택 불가 날짜 조건을 calendarProps로 바꿉니다. */
+function getCalendarProps(preset: DisabledDaysPreset) {
+  if (preset === "beforeToday") {
+    return { disabled: { before: new Date() } };
+  }
+  if (preset === "weekend") {
+    return {
+      disabled: (date: Date) => date.getDay() === 0 || date.getDay() === 6,
+    };
+  }
+  return undefined;
+}
+
+function formatValue(date: Date | undefined) {
+  return date ? format(date, VALUE_FORMAT) : undefined;
+}
+
+type DatePickerPlaygroundOptions = {
+  variant: DatePickerVariant;
+  selectedDate: Date | undefined;
+  placeholder: string;
+  formatString: string;
+  isDisabled: boolean;
+  isInvalid: boolean;
+  isResetEnabled: boolean;
+  disabledDays: DisabledDaysPreset;
+  align: DatePickerAlign;
+  side: DatePickerSide;
+};
+
+/** 현재 컨트롤 값으로 사용 코드를 만듭니다. */
+function buildPlaygroundCode({
+  variant,
+  selectedDate,
+  placeholder,
+  formatString,
+  isDisabled,
+  isInvalid,
+  isResetEnabled,
+  disabledDays,
+  align,
+  side,
+}: DatePickerPlaygroundOptions) {
+  const initialValue = selectedDate
+    ? `new Date(${selectedDate.getFullYear()}, ${selectedDate.getMonth()}, ${selectedDate.getDate()})`
+    : "";
+  const props = [
+    "id={pickerId}",
+    "aria-labelledby={`${labelId} ${pickerId}`}",
+    variant === "default" ? "" : `variant="${variant}"`,
+    "value={date}",
+    "onValueChange={(next) => setDate(next ?? null)}",
+    placeholder === DEFAULT_PLACEHOLDER ? "" : `placeholder="${placeholder}"`,
+    formatString === DEFAULT_FORMAT_STRING
+      ? ""
+      : `formatString="${formatString}"`,
+    isDisabled ? "disabled" : "",
+    isInvalid ? 'aria-invalid="true"' : "",
+    isResetEnabled ? "resetEnabled" : "",
+    DISABLED_DAYS_CODE[disabledDays],
+    align === "start" ? "" : `align="${align}"`,
+    side === "bottom" ? "" : `side="${side}"`,
+  ]
+    .filter(Boolean)
+    .map((prop) => `  ${prop}`)
+    .join("\n");
+
+  return `const labelId = useId();
+const pickerId = useId();
+// 값이 없는 제어형은 null (undefined를 넘기면 비제어형으로 동작)
+const [date, setDate] = useState<Date | null>(${initialValue || "null"});
+
+<span id={labelId}>보험 시작일</span>
+<DatePicker
+${props}
+/>`;
+}
+
+/** DatePicker Playground (이 페이지에서만 사용) */
+function DatePickerPlayground() {
+  const labelId = React.useId();
+  const pickerId = React.useId();
+  const [variant, setVariant] = React.useState<DatePickerVariant>("default");
+  const [selectedDate, setSelectedDate] = React.useState<Date>();
+  const [placeholder, setPlaceholder] = React.useState(DEFAULT_PLACEHOLDER);
+  const [formatString, setFormatString] = React.useState(
+    DEFAULT_FORMAT_STRING,
+  );
+  const [isDisabled, setIsDisabled] = React.useState(false);
+  const [isInvalid, setIsInvalid] = React.useState(false);
+  const [isResetEnabled, setIsResetEnabled] = React.useState(true);
+  const [disabledDays, setDisabledDays] =
+    React.useState<DisabledDaysPreset>("none");
+  const [align, setAlign] = React.useState<DatePickerAlign>("start");
+  const [side, setSide] = React.useState<DatePickerSide>("bottom");
+  const { eventLogs, addEventLog, clearEventLogs } = useGuideEventLog();
+
+  const updateSelectedDate = (nextDate: Date | undefined) => {
+    setSelectedDate(nextDate);
+  };
+
+  const handleChangeDatePickerValue = (nextDate: Date | undefined) => {
+    updateSelectedDate(nextDate);
+    addEventLog("onValueChange", formatValue(nextDate));
+  };
+
+  const handleResetDatePickerValue = (nextDate: Date | undefined) => {
+    addEventLog("onResetValue", formatValue(nextDate));
+  };
+
+  const handleChangeValueControl = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const nextText = event.target.value;
+    if (!nextText) {
+      updateSelectedDate(undefined);
+      return;
+    }
+    const nextDate = parse(nextText, VALUE_FORMAT, new Date());
+    if (isValid(nextDate)) {
+      updateSelectedDate(nextDate);
+    }
+  };
+
+  const handleClickReset = () => {
+    setVariant("default");
+    updateSelectedDate(undefined);
+    setPlaceholder(DEFAULT_PLACEHOLDER);
+    setFormatString(DEFAULT_FORMAT_STRING);
+    setIsDisabled(false);
+    setIsInvalid(false);
+    setIsResetEnabled(true);
+    setDisabledDays("none");
+    setAlign("start");
+    setSide("bottom");
+    clearEventLogs();
+  };
+
+  const controls: GuidePlaygroundControl[] = [
+    {
+      name: "variant",
+      type: '"default" | "btnType"',
+      description: "btnType은 달력 아이콘을 버튼 칸으로 분리한 모양",
+      control: (
+        <PlaygroundRadioControl
+          label="variant"
+          value={variant}
+          options={["default", "btnType"]}
+          onValueChange={(next) => setVariant(next as DatePickerVariant)}
+        />
+      ),
+    },
+    {
+      name: "value",
+      type: "Date | null",
+      description: "선택한 날짜 (onValueChange와 함께 제어형)",
+      control: (
+        <Input
+          type="date"
+          value={formatValue(selectedDate) ?? ""}
+          onChange={handleChangeValueControl}
+          aria-label="value"
+          className="w-full max-w-xs"
+        />
+      ),
+    },
+    {
+      name: "placeholder",
+      type: "string",
+      description: "비었을 때 글자 (라벨 대신 쓰지 않음)",
+      control: (
+        <PlaygroundTextControl
+          label="placeholder"
+          value={placeholder}
+          onValueChange={setPlaceholder}
+        />
+      ),
+    },
+    {
+      name: "formatString",
+      type: "string (date-fns 형식)",
+      description: "화면에 보이는 날짜 형식",
+      control: (
+        <PlaygroundRadioControl
+          label="formatString"
+          value={formatString}
+          options={FORMAT_STRINGS}
+          onValueChange={setFormatString}
+        />
+      ),
+    },
+    {
+      name: "disabled",
+      type: "boolean",
+      description: "트리거를 누를 수 없음",
+      control: (
+        <PlaygroundSwitchControl
+          label="disabled"
+          checked={isDisabled}
+          onCheckedChange={setIsDisabled}
+        />
+      ),
+    },
+    {
+      name: "aria-invalid",
+      type: '"true"',
+      description: "오류 테두리 (오류 문구와 aria-describedby를 함께 씀)",
+      control: (
+        <PlaygroundSwitchControl
+          label="aria-invalid"
+          checked={isInvalid}
+          onCheckedChange={setIsInvalid}
+        />
+      ),
+    },
+    {
+      name: "resetEnabled",
+      type: "boolean",
+      description: "값이 있을 때 지우기(×) 표시 (disabled이면 숨김)",
+      control: (
+        <PlaygroundSwitchControl
+          label="resetEnabled"
+          checked={isResetEnabled}
+          onCheckedChange={setIsResetEnabled}
+        />
+      ),
+    },
+    {
+      name: "calendarProps.disabled",
+      type: "Matcher",
+      description: "고를 수 없는 날짜 (예시 조건)",
+      control: (
+        <PlaygroundRadioControl
+          label="calendarProps.disabled"
+          value={disabledDays}
+          options={DISABLED_DAYS_OPTIONS}
+          onValueChange={(next) =>
+            setDisabledDays(next as DisabledDaysPreset)
+          }
+        />
+      ),
+    },
+    {
+      name: "align",
+      type: '"start" | "center" | "end"',
+      description: "달력이 열리는 가로 위치",
+      control: (
+        <PlaygroundRadioControl
+          label="align"
+          value={align}
+          options={["start", "center", "end"]}
+          onValueChange={(next) => setAlign(next as DatePickerAlign)}
+        />
+      ),
+    },
+    {
+      name: "side",
+      type: '"top" | "right" | "bottom" | "left"',
+      description: "달력이 열리는 방향 (공간이 모자라면 반대쪽으로 열릴 수 있음)",
+      control: (
+        <PlaygroundRadioControl
+          label="side"
+          value={side}
+          options={["top", "right", "bottom", "left"]}
+          onValueChange={(next) => setSide(next as DatePickerSide)}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <GuidePlayground
+      description="Controls에서 Props를 바꾸면 미리보기와 코드가 바로 바뀝니다. 미리보기에서 날짜를 골라도 Controls의 value가 함께 바뀝니다(제어형)."
+      code={buildPlaygroundCode({
+        variant,
+        selectedDate,
+        placeholder,
+        formatString,
+        isDisabled,
+        isInvalid,
+        isResetEnabled,
+        disabledDays,
+        align,
+        side,
+      })}
+      controls={controls}
+      controlsNote="달력 열림(open)은 DatePicker 안에서만 관리해 밖에서 제어할 수 없으므로 Controls에 넣지 않았습니다. DateRangePicker·DateRangePickerTwoPickers와 name·resetValue는 Samples 탭의 예시를 참고하세요."
+      state={{
+        value: formatValue(selectedDate) ?? null,
+        variant,
+        placeholder,
+        formatString,
+        disabled: isDisabled,
+        "aria-invalid": isInvalid,
+        resetEnabled: isResetEnabled,
+        calendarDisabled: disabledDays,
+        align,
+        side,
+      }}
+      eventLogs={eventLogs}
+      onReset={handleClickReset}
+    >
+      <div className="flex w-full max-w-md flex-col gap-2">
+        <span id={labelId} className="text-sm text-font-g">
+          보험 시작일
+        </span>
+        <DatePicker
+          id={pickerId}
+          aria-labelledby={`${labelId} ${pickerId}`}
+          variant={variant}
+          value={selectedDate ?? null}
+          onValueChange={handleChangeDatePickerValue}
+          placeholder={placeholder}
+          formatString={formatString}
+          disabled={isDisabled}
+          aria-invalid={isInvalid ? "true" : undefined}
+          resetEnabled={isResetEnabled}
+          onResetValue={handleResetDatePickerValue}
+          calendarProps={getCalendarProps(disabledDays)}
+          align={align}
+          side={side}
+        />
+      </div>
+    </GuidePlayground>
+  );
+}
 
 function SampleDatePickerPage() {
   const [selectedDate, setSelectedDate] = React.useState<Date>();
@@ -17,6 +379,7 @@ function SampleDatePickerPage() {
 
       {/* ── DatePicker ─────────────────────────────────────────────────── */}
       <div className="guide-content">
+        <GuideSampleTabs playground={<DatePickerPlayground />}>
         <GuideBox
           title="Basic date picker"
           description="기본 placeholder, 기본값, 비활성화 상태를 한 번에 확인합니다."
@@ -518,6 +881,7 @@ function SampleDatePickerPage() {
             </div>
           </div>
         </GuideBox>
+        </GuideSampleTabs>
       </div>
     </div>
   );

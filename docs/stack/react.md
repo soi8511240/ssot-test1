@@ -77,6 +77,8 @@ src/
         ├── publishing.ts        # 퍼블리싱 목록 데이터
         ├── sampleMeta.ts        # 가이드 사이드바 메뉴 데이터
         ├── GuideBox.tsx         # 샘플 블록 (제목·설명·코드)
+        ├── GuidePlayground.tsx  # Samples/Playground 탭, Playground(Controls·State) 공통 UI
+        ├── useGuideEventLog.ts  # Playground 이벤트 로그 훅
         ├── components/          # UI 컴포넌트 샘플 페이지 (sample*.tsx)
         ├── hooks/               # 훅 샘플 페이지
         ├── layout/              # 레이아웃 샘플 페이지

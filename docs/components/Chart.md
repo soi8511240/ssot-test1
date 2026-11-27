@@ -1,6 +1,6 @@
 # Chart
 
-> 파일: `src/components/ui/Chart/Chart.tsx` (Recharts 기반) · 가이드: `/guide/chart`
+> 파일: `src/components/ui/Chart/Chart.tsx` (Recharts 기반) · 가이드: `/guide/chart` (Samples · Playground 탭)
 > 기준: 템플릿 코드 (2026-11-25). 규칙: `AGENTS.md` 5.1.1
 
 ```tsx

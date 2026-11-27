@@ -1,6 +1,161 @@
 import { Button, Portal, usePortalContainer } from "@/components/ui";
 import { useEffect, useRef, useState } from "react";
 import { GuideBox } from "@/publish/guide/GuideBox";
+import {
+  GuidePlayground,
+  GuideSampleTabs,
+  PlaygroundRadioControl,
+  PlaygroundSwitchControl,
+  PlaygroundTextControl,
+  type GuidePlaygroundControl,
+} from "@/publish/guide/GuidePlayground";
+import { useGuideEventLog } from "@/publish/guide/useGuideEventLog";
+
+const BODY_CONTAINER = "document.body";
+const PLAYGROUND_TARGET_ID = "portal-playground-target";
+const PLAYGROUND_TARGET_SELECTOR = `#${PLAYGROUND_TARGET_ID}`;
+const DEFAULT_PORTAL_TEXT = "Portal로 렌더링된 콘텐츠입니다.";
+
+/** 현재 컨트롤 값으로 사용 코드를 만듭니다. */
+function buildPlaygroundCode(
+  isEnabled: boolean,
+  container: string,
+  portalText: string,
+) {
+  const isBody = container === BODY_CONTAINER;
+  const containerProp = isBody ? "" : ` container="${container}"`;
+  const targetMarkup = isBody
+    ? ""
+    : `\n{/* Portal 대상: 화면에 미리 있어야 합니다 */}\n<div id="${PLAYGROUND_TARGET_ID}" />\n`;
+
+  return `const [isEnabled, setIsEnabled] = useState(${isEnabled});
+${targetMarkup}
+<Portal${containerProp} enabled={isEnabled}>
+  <div>
+    <p>${portalText}</p>
+    <Button size="sm" type="button" onClick={() => setIsEnabled(false)}>
+      닫기
+    </Button>
+  </div>
+</Portal>`;
+}
+
+/** Portal Playground (이 페이지에서만 사용) */
+function PortalPlayground() {
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [container, setContainer] = useState(PLAYGROUND_TARGET_SELECTOR);
+  const [portalText, setPortalText] = useState(DEFAULT_PORTAL_TEXT);
+  const { eventLogs, addEventLog, clearEventLogs } = useGuideEventLog();
+
+  const isBody = container === BODY_CONTAINER;
+
+  const handleClickToggle = () => {
+    setIsEnabled((prev) => !prev);
+    addEventLog("Button onClick", isEnabled ? "숨기기" : "보이기");
+  };
+
+  const handleClickClose = () => {
+    setIsEnabled(false);
+    addEventLog("Portal 안 Button onClick", "닫기");
+  };
+
+  const handleClickReset = () => {
+    setIsEnabled(false);
+    setContainer(PLAYGROUND_TARGET_SELECTOR);
+    setPortalText(DEFAULT_PORTAL_TEXT);
+    clearEventLogs();
+  };
+
+  const controls: GuidePlaygroundControl[] = [
+    {
+      name: "enabled",
+      type: "boolean",
+      description: "false이면 Portal을 렌더링하지 않습니다. (기본 true)",
+      control: (
+        <PlaygroundSwitchControl
+          label="enabled"
+          checked={isEnabled}
+          onCheckedChange={setIsEnabled}
+        />
+      ),
+    },
+    {
+      name: "container",
+      type: "string | Element | DocumentFragment | null",
+      description:
+        "마운트할 DOM. 생략하면 document.body, 셀렉터 문자열이면 해당 요소 안에 렌더링합니다.",
+      control: (
+        <PlaygroundRadioControl
+          label="container"
+          value={container}
+          options={[
+            { value: BODY_CONTAINER, label: "생략 (document.body)" },
+            PLAYGROUND_TARGET_SELECTOR,
+          ]}
+          onValueChange={setContainer}
+        />
+      ),
+    },
+    {
+      name: "children",
+      type: "ReactNode",
+      description: "Portal로 옮겨 렌더링할 내용",
+      control: (
+        <PlaygroundTextControl
+          label="children"
+          value={portalText}
+          onValueChange={setPortalText}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <GuidePlayground
+      description="Controls에서 Props를 바꾸면 미리보기와 코드가 바로 바뀝니다. document.body를 고르면 콘텐츠가 화면 오른쪽 아래에 고정으로 표시됩니다."
+      code={buildPlaygroundCode(isEnabled, container, portalText)}
+      controls={controls}
+      controlsNote="Portal 자체에는 이벤트 Props가 없어, 이벤트 로그에는 미리보기 버튼의 onClick을 기록합니다. container에 DOM 노드를 직접 넘기는 방식은 Samples 탭의 usePortalContainer 예시를 참고하세요."
+      state={{
+        enabled: isEnabled,
+        container: isBody ? "(생략) document.body" : container,
+        children: portalText,
+      }}
+      eventLogs={eventLogs}
+      onReset={handleClickReset}
+    >
+      <div className="flex w-full max-w-xl flex-col gap-4">
+        <div>
+          <Button variant="outline" type="button" onClick={handleClickToggle}>
+            {isEnabled ? "숨기기" : "보이기"}
+          </Button>
+        </div>
+        <div
+          id={PLAYGROUND_TARGET_ID}
+          className="min-h-24 rounded-lg border border-dashed p-4 text-sm text-font-g"
+        >
+          id="{PLAYGROUND_TARGET_ID}" 컨테이너
+        </div>
+        <Portal container={isBody ? undefined : container} enabled={isEnabled}>
+          <div
+            className={
+              isBody
+                ? "fixed right-6 bottom-6 z-50 flex flex-col gap-2 rounded-lg border bg-base p-4 text-font-b"
+                : "mt-2 flex flex-col gap-2 rounded-lg border bg-base p-4 text-font-b"
+            }
+          >
+            <p>{portalText}</p>
+            <div>
+              <Button size="sm" type="button" onClick={handleClickClose}>
+                닫기
+              </Button>
+            </div>
+          </div>
+        </Portal>
+      </div>
+    </GuidePlayground>
+  );
+}
 
 function SamplePortalPage() {
   const [showDefault, setShowDefault] = useState(false);
@@ -25,6 +180,7 @@ function SamplePortalPage() {
     <div className="guide-layout">
       <h1 className="guide-title">Portal Samples</h1>
       <div className="guide-content">
+        <GuideSampleTabs playground={<PortalPlayground />}>
         {/* ── 기본 (document.body) ── */}
         <GuideBox
           title="기본 사용 (document.body)"
@@ -252,6 +408,7 @@ const [isOpen, setIsOpen] = useState(false);
             </Portal>
           </div>
         </GuideBox>
+        </GuideSampleTabs>
       </div>
     </div>
   );

@@ -11,6 +11,131 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { GuideBox } from "@/publish/guide/GuideBox";
+import {
+  GuidePlayground,
+  GuideSampleTabs,
+  PlaygroundSwitchControl,
+  PlaygroundTextControl,
+  type GuidePlaygroundControl,
+} from "@/publish/guide/GuidePlayground";
+import { useGuideEventLog } from "@/publish/guide/useGuideEventLog";
+
+const DEFAULT_TRIGGER_TEXT = "암진단 특약 상세";
+const PLAYGROUND_CONTENT_TEXT = "보장 내용, 면책 기간 등 특약의 상세 내용입니다.";
+
+/** 현재 컨트롤 값으로 사용 코드를 만듭니다. */
+function buildPlaygroundCode(
+  isOpen: boolean,
+  isDisabled: boolean,
+  triggerText: string,
+) {
+  const disabledProp = isDisabled ? "\n  disabled" : "";
+
+  return `const [open, setOpen] = useState(${isOpen});
+
+<Collapsible
+  open={open}
+  onOpenChange={setOpen}${disabledProp}
+  className="w-full max-w-md"
+>
+  <CollapsibleTrigger>
+    <span>${triggerText}</span>
+    <ChevronDownIcon className={collapsibleChevronClassName} aria-hidden />
+  </CollapsibleTrigger>
+  <CollapsibleContent>${PLAYGROUND_CONTENT_TEXT}</CollapsibleContent>
+</Collapsible>`;
+}
+
+/** Collapsible Playground (이 페이지에서만 사용) */
+function CollapsiblePlayground() {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [isDisabled, setIsDisabled] = React.useState(false);
+  const [triggerText, setTriggerText] = React.useState(DEFAULT_TRIGGER_TEXT);
+  const { eventLogs, addEventLog, clearEventLogs } = useGuideEventLog();
+
+  const handleChangeCollapsibleOpen = (nextOpen: boolean) => {
+    setIsOpen(nextOpen);
+    addEventLog("onOpenChange", nextOpen);
+  };
+
+  const handleClickReset = () => {
+    setIsOpen(false);
+    setIsDisabled(false);
+    setTriggerText(DEFAULT_TRIGGER_TEXT);
+    clearEventLogs();
+  };
+
+  const controls: GuidePlaygroundControl[] = [
+    {
+      name: "open",
+      type: "boolean",
+      description: "펼침 여부 (onOpenChange와 함께 제어형)",
+      control: (
+        <PlaygroundSwitchControl
+          label="open"
+          checked={isOpen}
+          onCheckedChange={setIsOpen}
+        />
+      ),
+    },
+    {
+      name: "disabled",
+      type: "boolean",
+      description: "접기·펼치기를 막음 (트리거가 눌리지 않음)",
+      control: (
+        <PlaygroundSwitchControl
+          label="disabled"
+          checked={isDisabled}
+          onCheckedChange={setIsDisabled}
+        />
+      ),
+    },
+    {
+      name: "CollapsibleTrigger children",
+      type: "ReactNode",
+      description: "트리거 글자 (무엇이 펼쳐지는지 알 수 있게)",
+      control: (
+        <PlaygroundTextControl
+          label="CollapsibleTrigger children"
+          value={triggerText}
+          onValueChange={setTriggerText}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <GuidePlayground
+      description="Controls에서 Props를 바꾸면 미리보기와 코드가 바로 바뀝니다. 미리보기의 트리거를 눌러도 Controls의 open이 함께 바뀝니다(제어형)."
+      code={buildPlaygroundCode(isOpen, isDisabled, triggerText)}
+      controls={controls}
+      controlsNote="defaultOpen은 처음 값만 정하는 비제어형 Prop이라 제어형 open으로 대신합니다. 여러 항목을 묶는 CollapsibleGroup(type·value·collapsible)은 Samples 탭의 예시를 참고하세요."
+      state={{
+        open: isOpen,
+        disabled: isDisabled,
+        triggerText,
+      }}
+      eventLogs={eventLogs}
+      onReset={handleClickReset}
+    >
+      <Collapsible
+        open={isOpen}
+        onOpenChange={handleChangeCollapsibleOpen}
+        disabled={isDisabled}
+        className="w-full max-w-md"
+      >
+        <CollapsibleTrigger>
+          <span>{triggerText}</span>
+          <ChevronDownIcon
+            className={collapsibleChevronClassName}
+            aria-hidden
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent>{PLAYGROUND_CONTENT_TEXT}</CollapsibleContent>
+      </Collapsible>
+    </GuidePlayground>
+  );
+}
 
 function SampleCollapsiblePage() {
   const [controlledOpen, setControlledOpen] = React.useState(false);
@@ -19,6 +144,7 @@ function SampleCollapsiblePage() {
     <div className="guide-layout">
       <h1 className="guide-title">Collapsible Samples</h1>
       <div className="guide-content">
+        <GuideSampleTabs playground={<CollapsiblePlayground />}>
         <GuideBox
           title="기본 Collapsible"
           description="루트·트리거·콘텐츠에 Collapsible.module.scss 기본 스타일이 적용됩니다. 아이콘에는 collapsibleChevronClassName을 쓰면 열림 상태에서 회전합니다."
@@ -267,6 +393,7 @@ const [open, setOpen] = React.useState(false);
             </CollapsibleContent>
           </Collapsible>
         </GuideBox>
+        </GuideSampleTabs>
       </div>
     </div>
   );
