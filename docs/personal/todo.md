@@ -62,6 +62,30 @@
 > - `get-components-from-figma`: REST(PAT) 또는 자체 플러그인으로 JSON을 받아 컴포넌트를 생성함. cva·Tailwind·간격 규칙은 우리와 다름
 > - 디자인 원본(`requirements.md` 6장)이 아직 없음 → 코드는 Phase 2 승인 뒤
 
+> **11-27 추출 품질 점검** (`D:\workspace\get-components-from-figma`, 피그마 파일 `transfer html`, 비교 갤러리로 눈으로 확인 + 코드 집계. 픽셀 단위 비교는 안 함)
+>
+> **겉모습:** 자동 생성 Btn(22개 조합)·Cell(21개)·Top과 손질한 `ui/Button`은 피그마 캡처와 거의 같아 보임
+>
+> - Top: `총 9,999,000건`의 숫자만 파란색인데 React는 전부 검정 → 한 글자 레이어 안의 부분 색·굵기를 생성기가 못 옮김
+> - 채움 버튼 글자가 React 쪽이 더 굵어 보이나 계산된 굵기는 둘 다 400 → 렌더링 차이로 추정 (확인 안 됨)
+>
+> **구조:** 자동 생성 코드는 그대로 가져올 수 없음 (참고·치수 확인용)
+>
+> | 문제 | 내용 |
+> | --- | --- |
+> | 시맨틱·접근성 | 버튼이 전부 `<div>` (Btn div 22, `<button>` 0). `type`·포커스·키보드 없음 |
+> | variant 방식 | 조합마다 JSX를 따로 만들어 `switch` (Btn 21, Cell 21 case). cva 아님 |
+> | 상태를 prop으로 | hover·disable·open·close가 `state` 값 → `:hover`·`disabled`로 바꿔야 함 |
+> | 피그마 이름 그대로 | 오타 `nomal`·`bese`, 한글 섞인 값 `green-전결`·`red-반려`, 상태와 용도가 섞인 `Search`·`Reset` |
+> | 문구 고정 | 조합별로 글자가 박혀 있음 (Btn 11, Cell 15, Top 8곳). `buttonName` prop이 무시되는 조합 있음 |
+> | 토큰 이름 불일치 | 피그마 변수 `--primary-7-bese`, `--neutral-warm-9-1` 등 ↔ 우리 `--primary`, `--font-b`, `--line01`. 우리 `--primary`는 초록(#00997a), 피그마 주색은 파랑 → 토큰 대응표 필요 |
+> | hex | `var(--x, #hex)` 대체값 Btn 53·Cell 77·Top 18, var 밖 hex Cell 5·Top 3 |
+> | 간격 2·4·6 밖 | 디자인 자체가 1·2·4·6·10·12px를 씀 (Cell: 4px 28회, 12px 24회, 2px 15회) → 규칙 예외를 정할지 디자인과 협의 |
+>
+> - 손질한 `ui/Button`은 `<button>`, `type="button"`, `disabled`를 갖춰 방향은 맞음. 다만 cva가 아니고 템플릿 `Button`(variant `default/outline/ghost/text`, color `default/gray/black/grayBg`)과 API가 달라, 가져올 때는 새 컴포넌트가 아니라 **템플릿 Button에 variant·color 추가**로 가야 함 (`AGENTS.md` 5.1)
+>
+> **결론:** 생성기는 "치수·색·변형 목록을 뽑는 도구"로 쓰고, 코드는 그 데이터를 보고 우리 규칙대로 새로 쓴다. 남은 결정: ① `transfer html`이 이 프로젝트 디자인 원본인지(`requirements.md` 6장) ② 피그마 변수 ↔ 우리 토큰 대응표 ③ 4·12px 등 간격 예외
+
 ### 4. SSOT 수정 기록
 
 - [ ] SSOT 문서가 수정될 때 로그와 변경 내용 남기기
