@@ -39,4 +39,4 @@ function CodePanel({ code }: { code: string }) {
 }
 ```
 
-`fallback`에 로딩 표시가 필요하면 템플릿의 `Loading` 컴포넌트(`@/components/ui`)를 사용합니다.
+`fallback`에 로딩 표시가 필요하면 공통 `Loading` 컴포넌트(`@/components/ui`)를 사용합니다.

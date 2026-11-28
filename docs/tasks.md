@@ -16,18 +16,18 @@
 
 ## Phase 1. 초기 구성
 
-- [x] 1-1. publishTemplate 가져오기 (`.git`, `.github` 제외), 패키지 이름 `ssort-test1`
+- [x] 1-1. 기본 구조 구성, 패키지 이름 `ssort-test1`
 - [x] 1-2. `vite.config.ts` `base`를 `/`로 변경
 - [x] 1-3. `pnpm install`로 의존성 설치 (`pnpm-lock.yaml` 기준)
 - [x] 1-4. 빌드 통과 확인 (`pnpm build`)
 - [x] 1-5. 프로젝트 정보 반영: `index.html` `<title>`과 `RouteTitleSync.tsx` `APP_TITLE`을 `보험가입설계 서비스`로 변경. 가이드 로고 `Publish Guide`는 가이드 도구 이름이라 유지
-- [x] 1-6. 템플릿 예시 페이지(홈, 로그인, 대시보드) 유지 결정, 탭 제목을 `publishing.ts` 이름으로 표시
+- [x] 1-6. 예시 페이지(홈, 로그인, 대시보드) 유지 결정, 탭 제목을 `publishing.ts` 이름으로 표시
 - [x] 1-7. 린트 오류 정리 (`pnpm lint` 0건)
 
 ## Phase 2. 화면 분석 (코드 작성 없음)
 
 - [ ] 2-1. 디자인 원본(`requirements.md` 6장) 전체 페이지 확인
-- [ ] 2-2. 필요한 UI를 템플릿 컴포넌트(`design.md` 2장)와 대조하고, 부족한 컴포넌트·variant를 `제안`으로 기록
+- [ ] 2-2. 필요한 UI를 공통 컴포넌트(`design.md` 2장)와 대조하고, 부족한 컴포넌트·variant를 `제안`으로 기록
 - [ ] 2-3. 제안 목록 사용자 승인 → 상태 `승인`으로 변경
 - [ ] 2-4. 승인된 항목을 Phase 3에 작업으로 등록
 

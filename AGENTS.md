@@ -2,8 +2,6 @@
 
 > 이 파일은 프로젝트의 **AI 개발 규칙에 대한 단일 원본(SSOT)**입니다. AI 코딩 도구는 작업 전에 이 파일을 확인하며, 도구별 지침 파일(`CLAUDE.md` 등)은 이 문서를 참조하도록 설정합니다.
 >
-> 이 프로젝트는 **publishTemplate**(React 퍼블리싱 템플릿, https://github.com/codoly83/publishTemplate)을 기반으로 합니다. 규칙은 템플릿의 구조·스타일 방식을 그대로 따르며, 템플릿 가이드 화면(`/guide/base`, `/guide/naming-convention`, `/guide/tailwind-strategy`, `/guide/folder-structure`)과 이 문서가 다르면 사용자에게 확인합니다.
->
 > 스택별 문법·폴더·명령어·예시 코드는 `docs/requirements.md` 0장에 지정한 **스택 파일**(`docs/stack/react.md`)에 있습니다.
 
 ---
@@ -14,7 +12,7 @@
 - **작업 범위:** **퍼블리싱 전용** (실제 API 연동은 하지 않습니다)
 - **스택 파일:** `docs/requirements.md` 0장에 지정된 스택 파일 **하나만** 읽습니다.
 - **문서 읽기 순서:** `AGENTS.md` → `docs/requirements.md` 0장(스택 확인) → 스택 파일 → `docs/requirements.md` → `docs/design.md` → `docs/tasks.md`
-- **디자인 원본:** 사용하는 디자인 툴과 링크·파일 위치는 `docs/requirements.md` 6장에서만 정의합니다. 디자인 원본이 없으면 템플릿에 있는 컴포넌트·토큰을 기준으로 작업합니다.
+- **디자인 원본:** 사용하는 디자인 툴과 링크·파일 위치는 `docs/requirements.md` 6장에서만 정의합니다. 디자인 원본이 없으면 `src/components/ui/`의 컴포넌트와 `docs/design.md` 6장 토큰을 기준으로 작업합니다.
 - **작업별 추가 문서:** 퍼블리싱 목록(IA) 작업은 `docs/ia-spec-react.md`, 가이드 작업은 `docs/guide-spec-react.md`를 읽습니다.
 - 문서가 없거나 내용이 불명확하면 가정하지 않고 사용자에게 확인합니다.
 
@@ -34,7 +32,7 @@
 
 - `package.json`에 이미 있는 라이브러리를 우선 사용합니다. 같은 역할의 라이브러리를 새로 추가하지 않습니다. (예: 아이콘이 필요하면 `react-icons`를 새로 쓰지 말고 `src/assets/icons/` 또는 `lucide-react`)
 - 새 라이브러리는 이유와 영향 범위를 설명하고 승인받은 뒤 `pnpm add`로 설치하며, 이 문서와 스택 파일을 갱신합니다.
-- 전역 상태(`zustand`), 서버 상태(`@tanstack/react-query`), 목 API(`msw`)는 템플릿에 포함되어 있지만 퍼블리싱 단계에서는 필요할 때만 씁니다.
+- 전역 상태(`zustand`), 서버 상태(`@tanstack/react-query`), 목 API(`msw`)는 `package.json`에 포함되어 있지만 퍼블리싱 단계에서는 필요할 때만 씁니다.
 
 ## 3. 주요 명령어
 
@@ -55,7 +53,7 @@
 
 - 컴포넌트 작성 문법은 스택 파일 4장을 따릅니다.
 - 이벤트 핸들러는 `handle + 대상 + 동사` 형식을 사용합니다. 예: `handleSubmitForm`
-- 기존 공통 컴포넌트가 있으면 새로 만들지 않고 재사용합니다. 템플릿에 이미 있는 컴포넌트 목록은 `/guide`의 components 섹션과 `src/components/ui/index.ts`가 기준입니다.
+- 기존 공통 컴포넌트가 있으면 새로 만들지 않고 재사용합니다. 이미 있는 공통 컴포넌트 목록은 `/guide`의 components 섹션과 `src/components/ui/index.ts`가 기준입니다.
 - 새 공통 컴포넌트는 2곳 이상에서 쓰일 때만 만들고, 1곳에서만 쓰는 UI는 해당 페이지 파일 안에 작성합니다.
 - 공통 컴포넌트별 사용 규칙은 `docs/components/{이름}.md`에 있습니다. 해당 컴포넌트를 쓰거나 고치기 전에 읽습니다.
 ### 5.1.1 className 사용 범위와 간격
@@ -69,7 +67,7 @@
     - `6`: 페이지 안 구역 사이
 - 세 단계로 표현할 수 없는 간격이 디자인에 있으면 임의 값(`gap-[13px]` 등)을 쓰지 않고 사용자에게 확인합니다.
 
-### 5.2 이름 규칙 (템플릿 `/guide/naming-convention`)
+### 5.2 이름 규칙 (가이드 `/guide/naming-convention`)
 
 | 대상 | 규칙 | 예시 |
 | --- | --- | --- |
@@ -85,7 +83,7 @@
 
 - 축약어는 팀 공통 약속어만 허용합니다. 약속어: `icon`, `btn`, `inner`, `area`, `wrap`, `box`, `list`/`item`, `title`/`desc`, `thumb`, `content`, `header`/`body`/`footer`, `form`/`field`
 
-### 5.3 스타일 (템플릿 `/guide/tailwind-strategy`)
+### 5.3 스타일 (가이드 `/guide/tailwind-strategy`)
 
 - **컴포넌트 규칙은 SCSS/CSS, 페이지 유동 배치는 Tailwind `className`**으로 혼용합니다.
     - 공통 컴포넌트의 기본 스타일, variant, size, 상태 스타일 → 컴포넌트 폴더의 스타일 파일(`.module.css`/`.module.scss`/`.scss`)
@@ -110,7 +108,7 @@
 
 ### 5.6 슬라이드(Swiper)
 
-- 슬라이드·캐러셀은 템플릿의 `Swiper`·`SwiperSlide`(`@/components/ui`에서 export)로 구현하며 직접 구현하지 않습니다.
+- 슬라이드·캐러셀은 공통 컴포넌트 `Swiper`·`SwiperSlide`(`@/components/ui`에서 export)로 구현하며 직접 구현하지 않습니다.
 - 자동 재생·페이지네이션·네비게이션은 디자인·요구사항에 있을 때만 추가합니다.
 
 ## 6. 퍼블리싱 작업 규칙
@@ -138,8 +136,8 @@
 
 | 단계 | 작업 | 완료 조건 |
 | --- | --- | --- |
-| 1. 초기 구성 | 템플릿 적용, 프로젝트 정보 반영 | `/guide/ialist` 접속, 빌드 통과 |
-| 2. 화면 분석 | 디자인 원본의 전체 페이지를 보고 필요한 UI를 템플릿 컴포넌트와 대조. 부족한 컴포넌트·variant 목록 작성 | `docs/design.md` 2장 표에 기록, 사용자 승인, `docs/tasks.md`에 작업 등록 |
+| 1. 초기 구성 | 기본 구조 구성, 프로젝트 정보 반영 | `/guide/ialist` 접속, 빌드 통과 |
+| 2. 화면 분석 | 디자인 원본의 전체 페이지를 보고 필요한 UI를 기존 공통 컴포넌트(`src/components/ui/`)와 대조. 부족한 컴포넌트·variant 목록 작성 | `docs/design.md` 2장 표에 기록, 사용자 승인, `docs/tasks.md`에 작업 등록 |
 | 3. 공통 컴포넌트 + 가이드 | 2단계에서 승인된 컴포넌트 추가·수정 | 가이드 샘플 페이지 갱신, 9.2 수동 검수 |
 | 4. 페이지 | 공통 컴포넌트를 조합해 `src/publish/pages/`에 페이지 작성 | 퍼블리싱 목록 등록, 디자인·동작 확인, 빌드 통과 |
 
@@ -167,8 +165,10 @@
 - 문서에 쌓이는 기록(결정 기록, 완료 기록 등)은 본문에 두지 않고 같은 폴더의 `{파일명}_history.md`에 추가합니다. 본문에는 해당 장 제목과 참조 문구만 남깁니다.
     - 현재: `docs/design_history.md`(`design.md` 8장 결정 기록), `docs/tasks_history.md`(`tasks.md` 완료 기록)
     - `{파일명}_history.md` 파일(`design_history.md`, `tasks_history.md` 등)은 사람이 보는 기록입니다. AI는 작업 기준으로 읽지 않고, 기록을 추가할 때만 엽니다.
+    - 이미 적힌 기록은 수정·삭제하지 않습니다. 문서 전체의 용어나 출처를 정리할 때도 history 파일은 대상에서 빼고, 따로 묻지 않고 그대로 둡니다.
 - 스펙 변경이 확정되면 공식 문서를 먼저 갱신하고 코드를 수정합니다.
 - 문서와 코드가 충돌하면 임의로 덮어쓰지 않고 차이를 보고합니다.
+- 가이드 화면(`/guide/base`, `/guide/naming-convention`, `/guide/tailwind-strategy`, `/guide/folder-structure`)과 이 문서가 다르면 사용자에게 확인합니다.
 
 ## 8. AI 작업 절차
 

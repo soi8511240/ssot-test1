@@ -1,6 +1,6 @@
 # 퍼블리싱 가이드 명세 (`docs/guide-spec-react.md`)
 
-> 퍼블리싱 가이드 `/guide/*`의 명세입니다 (`AGENTS.md` 6.3절). publishTemplate의 가이드를 그대로 사용합니다.
+> 퍼블리싱 가이드 `/guide/*`의 명세입니다 (`AGENTS.md` 6.3절).
 
 ## 1. 화면 구성
 

@@ -323,4 +323,4 @@ H8 renderlint back-navigation
 - hex 색 직접 사용 금지 (5.3)
 - 간격 `2`·`4`·`6`, 공통 컴포넌트 `className` 덮어쓰기 금지 (5.1.1)
 - 새 페이지 퍼블리싱 목록 등록 (6.2)
-- `<button>`에 `type` 지정 (6.1). 화면에서는 F10으로 보고, 코드에서는 `<button`에 `type`이 빠진 곳을 찾습니다. 템플릿 `Button`은 기본값이 `button`이라 따로 적지 않아도 됩니다
+- `<button>`에 `type` 지정 (6.1). 화면에서는 F10으로 보고, 코드에서는 `<button`에 `type`이 빠진 곳을 찾습니다. 공통 `Button`은 기본값이 `button`이라 따로 적지 않아도 됩니다

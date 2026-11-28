@@ -14,10 +14,8 @@
 | 이름 | 보험가입설계 서비스 (테스트 프로젝트) |
 | 설명 | 보험 가입 설계 화면을 퍼블리싱하는 **테스트용 프로젝트**입니다. 실제 서비스로 시작된 프로젝트가 아니며, 작업 방식과 문서 규칙을 시험하는 용도입니다. |
 | 대상 사용자 | 보험 설계사 (고객의 보험 가입을 설계하는 업무 사용자) |
-| 스택 | React + TypeScript (publishTemplate 기반: Vite 7, React 19, Tailwind 4, React Router 7, pnpm) |
+| 스택 | React + TypeScript (Vite 7, React 19, Tailwind 4, React Router 7, pnpm) |
 | 스택 파일 | `docs/stack/react.md` |
-
-> 기반 템플릿: https://github.com/codoly83/publishTemplate (`docs/design.md` 8장)
 
 ## 1. 목표
 
@@ -57,9 +55,9 @@
 | 경로 | 페이지 | 설명 | 우선순위 |
 |---|---|---|---|
 | `/publish/{경로}` | `{페이지명}` | 실제 프로젝트 화면(요구사항 확정 후 작성, `src/publish/pages/`) | 프로젝트별 |
-| `/publish/home` | 홈 | 템플릿 예시 페이지 (교체 예정) | 예시 |
-| `/publish/login/login` | 로그인 | 템플릿 예시 페이지 (교체 예정) | 예시 |
-| `/publish/dashboard/dashboard` | 대시보드 | 템플릿 예시 페이지 (교체 예정) | 예시 |
+| `/publish/home` | 홈 | 예시 페이지 (교체 예정) | 예시 |
+| `/publish/login/login` | 로그인 | 예시 페이지 (교체 예정) | 예시 |
+| `/publish/dashboard/dashboard` | 대시보드 | 예시 페이지 (교체 예정) | 예시 |
 | `/guide/ialist` | 퍼블리싱 목록 | 페이지 목록·진행 상태 (`AGENTS.md` 6.2) | 필수 |
 | `/guide/*` | 퍼블리싱 가이드 | 공통 컴포넌트·훅·레이아웃 가이드 | 필수 |
 
@@ -74,8 +72,7 @@
 
 > 이 절이 **디자인 원본의 SSOT**입니다. 다른 문서의 "디자인 원본"은 여기에 지정한 시안을 뜻하며, 디자인 툴이 바뀌면 이 절만 갱신합니다.
 
-- **디자인 원본:** 아직 없음 (작업 중). 디자인이 나오기 전에는 publishTemplate의 컴포넌트·토큰을 기준으로 작업
-- **기반 템플릿:** https://github.com/codoly83/publishTemplate
+- **디자인 원본:** 아직 없음 (작업 중). 디자인이 나오기 전에는 `src/components/ui/`의 컴포넌트와 `docs/design.md` 6장 토큰을 기준으로 작업
 - **에셋 제공 방식:** {툴에서 직접 추출 / 디자이너가 별도 전달 (전달 위치)}
 - **시안 전달 방식:** {전체 일괄 / 페이지별 순차 — 순차면 새 시안마다 화면 분석(`AGENTS.md` 6.4 2단계) 재수행}
 - **기존 사이트:** {URL}
@@ -84,5 +81,5 @@
 ## 7. 미결정 사항
 
 - [ ] 디자인 원본 (툴, 위치)
-- [ ] 템플릿 예시 페이지(홈, 로그인, 대시보드) 유지 여부
+- [ ] 예시 페이지(홈, 로그인, 대시보드) 유지 여부
 - [ ] {아직 정하지 않은 것}

@@ -1,7 +1,7 @@
 # React 스택 규칙 (`docs/stack/react.md`)
 
-> `docs/requirements.md` 0장의 스택이 **React + TypeScript (publishTemplate)**일 때 읽는 파일입니다.
-> 공통 규칙(무엇을 지킬지)은 `AGENTS.md`에 있고, 이 파일은 그 규칙을 **이 템플릿에서 어떻게 구현하는지**만 정의합니다.
+> `docs/requirements.md` 0장의 스택이 **React + TypeScript**일 때 읽는 파일입니다.
+> 공통 규칙(무엇을 지킬지)은 `AGENTS.md`에 있고, 이 파일은 그 규칙을 **이 프로젝트에서 어떻게 구현하는지**만 정의합니다.
 > 각 장 번호는 `AGENTS.md`에서 "스택 파일 N장"으로 참조합니다. 장 번호를 바꾸면 `AGENTS.md`의 참조도 함께 고칩니다.
 
 ---
@@ -32,7 +32,7 @@
 **사용 금지**
 
 - 클래스형 React 컴포넌트
-- 이미 있는 라이브러리와 같은 역할의 새 라이브러리 (예: MUI·Emotion은 템플릿 의존성에 있지만 새 화면에서 쓰지 않습니다. `react-icons`는 새로 쓰지 않습니다)
+- 이미 있는 라이브러리와 같은 역할의 새 라이브러리 (예: MUI·Emotion은 `package.json` 의존성에 있지만 새 화면에서 쓰지 않습니다. `react-icons`는 새로 쓰지 않습니다)
 
 ## 2. 주요 명령어
 
@@ -99,7 +99,7 @@ tools/                           # 빌드에 들어가지 않는 작업 도구·
 
 ## 4. 컴포넌트 작성
 
-- 템플릿의 기존 방식을 따릅니다. 컴포넌트는 `function` 선언 또는 화살표 함수 모두 허용하며, 같은 파일 안에서는 기존 스타일에 맞춥니다.
+- 기존 코드 방식을 따릅니다. 컴포넌트는 `function` 선언 또는 화살표 함수 모두 허용하며, 같은 파일 안에서는 기존 스타일에 맞춥니다.
 - 공통 UI 컴포넌트는 **이름 있는 export**(`export { Button }`)로 내보내고 `src/components/ui/index.ts`에 추가합니다. 사용하는 쪽은 `import { Button } from "@/components/ui";`로 불러옵니다.
 - 페이지·가이드 샘플 페이지는 `export default`로 내보냅니다.
 - 변형은 `class-variance-authority`(`cva`)로 정의하고, 클래스 병합은 `cn()`(`@/lib/utils`)을 사용합니다. 변형을 다른 파일에서도 쓰려면 `{Name}.variants.ts`로 분리해 내보냅니다. (9장)
@@ -133,10 +133,10 @@ export { Sample };
 | --- | --- |
 | 이벤트 Props | `onClick`, `onCheckedChange` 등 (Radix 규칙 유지). 내부 함수는 `handleXxx` |
 | 변형·크기 | `cva`의 `variants` + `defaultVariants` |
-| 오버레이 | Radix Portal 또는 템플릿 `Portal` 컴포넌트 (`container` 지정 가능) |
+| 오버레이 | Radix Portal 또는 공통 `Portal` 컴포넌트 (`container` 지정 가능) |
 | 고유 ID | `useId()` |
 | 반복 렌더링 키 | `map()` + 고유 `key` |
-| 레이아웃 타입 전환 | `useLayoutClass("type2")` 등 템플릿 훅 사용 |
+| 레이아웃 타입 전환 | `useLayoutClass("type2")` 등 공통 훅 사용 |
 | 다크모드 | `useTheme()`(`@/providers/theme-context`)의 `setTheme` |
 
 ## 6. TypeScript 및 상태 관리
@@ -173,7 +173,7 @@ export { Sample };
 | 타입 오류 없음 | `pnpm build` (`tsc -b`) |
 | ESLint 권장 규칙, Hooks 규칙 | `pnpm lint` (`eslint.config.js`) |
 
-- 린트 오류 0건 상태를 유지합니다. (2026-11-25 템플릿 원본 오류 정리 완료)
+- 린트 오류 0건 상태를 유지합니다. (2026-11-25 기존 오류 정리 완료)
 - `_` 접두어 변수·인자는 "의도적으로 쓰지 않는 값"으로 보고 미사용 검사에서 제외합니다.
 - `react-refresh/only-export-components` 규칙 때문에 컴포넌트 파일(`.tsx`)에서는 **컴포넌트와 타입만** 내보냅니다. cva 변형·상수·유틸 함수는 같은 폴더의 `{Name}.variants.ts`, 훅은 별도 `.ts` 파일(예: `Portal/usePortalContainer.ts`, `providers/theme-context.ts`의 `useTheme`)에 두고 `index.ts`에서 다시 내보냅니다.
 

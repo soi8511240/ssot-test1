@@ -1,6 +1,6 @@
 # 퍼블리싱 목록 명세 (`docs/ia-spec-react.md`)
 
-> 퍼블리싱 페이지 목록(IA) 화면 `/guide/ialist`의 명세입니다 (`AGENTS.md` 6.2절). publishTemplate의 `PublishingList`를 그대로 사용합니다.
+> 퍼블리싱 페이지 목록(IA) 화면 `/guide/ialist`의 명세입니다 (`AGENTS.md` 6.2절). 화면은 `PublishingList` 컴포넌트입니다.
 
 ## 1. 개요
 
@@ -35,7 +35,7 @@ export const publishingList = [
 - `path`는 실제 라우트와 같아야 합니다. (`docs/stack/react.md` 3장 자동 라우팅 규칙)
 - 검증되지 않은 페이지를 `"완료"`로 표시하지 않습니다. `docs/tasks.md`에서 검증 완료된 페이지만 `"완료"`로 바꿉니다.
 - `docs/tasks.md`와 상태가 다르면 사용자에게 확인하며 임의로 덮어쓰지 않습니다.
-- 템플릿 예시 페이지(홈, 로그인, 대시보드)는 실제 프로젝트 페이지가 확정되면 사용자 확인 후 교체하거나 삭제합니다.
+- 예시 페이지(홈, 로그인, 대시보드)는 실제 프로젝트 페이지가 확정되면 사용자 확인 후 교체하거나 삭제합니다.
 
 ## 4. 확인 항목
 

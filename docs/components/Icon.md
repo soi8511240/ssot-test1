@@ -1,7 +1,7 @@
 # Icon
 
 > 파일: `src/components/ui/Icon/Icon.tsx` (+ `Icon.types.ts`, 그림 파일 `src/assets/icons/*.svg`) · 가이드: `/guide/icon` (Samples · Playground 탭)
-> 기준: 템플릿 코드 (2026-11-25). 규칙: `AGENTS.md` 5.1.1
+> 기준: 컴포넌트 코드 (2026-11-25). 규칙: `AGENTS.md` 5.1.1
 
 ```tsx
 import { Icon } from "@/components/ui";

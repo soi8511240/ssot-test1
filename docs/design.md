@@ -2,7 +2,7 @@
 
 > 이 문서는 **어떻게 만드는지** 정의하는 설계 문서입니다.
 > 기능 요구사항은 `docs/requirements.md`, AI 개발 및 코딩 규칙은 `AGENTS.md`를 따릅니다.
-> **현재 작업 범위:** publishTemplate(React + TypeScript) 기반 퍼블리싱 전용
+> **현재 작업 범위:** React + TypeScript 퍼블리싱 전용
 > 마지막 수정: 2026-11-25
 
 ---
@@ -42,46 +42,46 @@ App (ThemeProvider)
 
 ## 2. 컴포넌트 명세
 
-> 템플릿에 포함된 공통 UI 컴포넌트 목록입니다. 사용 규칙은 `docs/components/{이름}.md`(작성된 것 12개: Accordion, AlertDialog, Button, Card, Chart, Checkbox, Chip, Collapsible, DatePicker, Icon, Input, InputStepper), 실제 예시는 `/guide/{경로}` 샘플 페이지가 기준입니다.
+> 프로젝트에 포함된 공통 UI 컴포넌트 목록입니다. 사용 규칙은 `docs/components/{이름}.md`(작성된 것 12개: Accordion, AlertDialog, Button, Card, Chart, Checkbox, Chip, Collapsible, DatePicker, Icon, Input, InputStepper), 실제 예시는 `/guide/{경로}` 샘플 페이지가 기준입니다.
 > 화면 분석(`AGENTS.md` 6.4 2단계)에서 부족한 컴포넌트·variant가 나오면 `상태`를 `제안`으로 추가하고, 승인 후 `승인`으로 바꿔 `docs/tasks.md`에 등록합니다.
 
 | 컴포넌트 | 위치 (`components/ui/`) | 가이드 | 상태 |
 | --- | --- | --- | --- |
-| Accordion | `Accordion/` | `/guide/accordion` | 템플릿 |
-| AlertDialog | `AlertDialog/` | `/guide/alert-dialog` | 템플릿 |
-| Button | `Button/` | `/guide/button` | 템플릿 |
-| Card | `Card/` | `/guide/card` | 템플릿 |
-| Chart | `Chart/` | `/guide/chart` | 템플릿 |
-| Checkbox, CheckboxGroup | `Checkbox/` | `/guide/checkbox` | 템플릿 |
-| Chip | `Chip/` | `/guide/chip` | 템플릿 |
-| Collapsible | `Collapsible/` | `/guide/collapsible` | 템플릿 |
-| DatePicker, DateRangePicker | `DatePicker/` | `/guide/datepicker` | 템플릿 |
-| Icon | `Icon/` | `/guide/icon` | 템플릿 |
-| Input | `Input/` | `/guide/input` | 템플릿 |
-| InputStepper | `InputStepper/` | `/guide/input-stepper` | 템플릿 |
-| Loading | `Loading/` | `/guide/loading` | 템플릿 |
-| Modal | `Modal/` | `/guide/modal` | 템플릿 |
-| PageChangePanel | `PageChangePanel/` | `/guide/pagechangepanel` | 템플릿 |
-| Pagination | `Pagination/` | `/guide/pagination` | 템플릿 |
-| Popover | `Popover/` | `/guide/popover` | 템플릿 |
-| Portal | `Portal/` | `/guide/portal` | 템플릿 |
-| Radio | `Radio/` | `/guide/radio` | 템플릿 |
-| ScrollArea | `ScrollArea/` | `/guide/scrollarea` | 템플릿 |
-| Select | `Select/` | `/guide/select` | 템플릿 |
-| Skeleton | `Skeleton/` | `/guide/skeleton` | 템플릿 |
-| Slider | `Slider/` | `/guide/slider` | 템플릿 |
-| SortableList | `SortableList/` | `/guide/sortable-list` | 템플릿 |
-| Swiper (SwiperCustom) | `SwiperCustom/` | `/guide/swiper` | 템플릿 |
-| Switch | `Switch/` | `/guide/switch` | 템플릿 |
-| Table | `Table/` | `/guide/table` | 템플릿 |
-| Tabs | `Tabs/` | `/guide/tabs` | 템플릿 |
-| Textarea | `TextArea/` | `/guide/textarea` | 템플릿 |
-| TextList | `TextList/` | `/guide/text-list` | 템플릿 |
-| Toast | `Toast/` | `/guide/toast` | 템플릿 |
-| Tooltip | `Tooltip/` | `/guide/tooltip` | 템플릿 |
-| TreeView | `TreeView/` | `/guide/tree-view` | 템플릿 |
+| Accordion | `Accordion/` | `/guide/accordion` | 기본 |
+| AlertDialog | `AlertDialog/` | `/guide/alert-dialog` | 기본 |
+| Button | `Button/` | `/guide/button` | 기본 |
+| Card | `Card/` | `/guide/card` | 기본 |
+| Chart | `Chart/` | `/guide/chart` | 기본 |
+| Checkbox, CheckboxGroup | `Checkbox/` | `/guide/checkbox` | 기본 |
+| Chip | `Chip/` | `/guide/chip` | 기본 |
+| Collapsible | `Collapsible/` | `/guide/collapsible` | 기본 |
+| DatePicker, DateRangePicker | `DatePicker/` | `/guide/datepicker` | 기본 |
+| Icon | `Icon/` | `/guide/icon` | 기본 |
+| Input | `Input/` | `/guide/input` | 기본 |
+| InputStepper | `InputStepper/` | `/guide/input-stepper` | 기본 |
+| Loading | `Loading/` | `/guide/loading` | 기본 |
+| Modal | `Modal/` | `/guide/modal` | 기본 |
+| PageChangePanel | `PageChangePanel/` | `/guide/pagechangepanel` | 기본 |
+| Pagination | `Pagination/` | `/guide/pagination` | 기본 |
+| Popover | `Popover/` | `/guide/popover` | 기본 |
+| Portal | `Portal/` | `/guide/portal` | 기본 |
+| Radio | `Radio/` | `/guide/radio` | 기본 |
+| ScrollArea | `ScrollArea/` | `/guide/scrollarea` | 기본 |
+| Select | `Select/` | `/guide/select` | 기본 |
+| Skeleton | `Skeleton/` | `/guide/skeleton` | 기본 |
+| Slider | `Slider/` | `/guide/slider` | 기본 |
+| SortableList | `SortableList/` | `/guide/sortable-list` | 기본 |
+| Swiper (SwiperCustom) | `SwiperCustom/` | `/guide/swiper` | 기본 |
+| Switch | `Switch/` | `/guide/switch` | 기본 |
+| Table | `Table/` | `/guide/table` | 기본 |
+| Tabs | `Tabs/` | `/guide/tabs` | 기본 |
+| Textarea | `TextArea/` | `/guide/textarea` | 기본 |
+| TextList | `TextList/` | `/guide/text-list` | 기본 |
+| Toast | `Toast/` | `/guide/toast` | 기본 |
+| Tooltip | `Tooltip/` | `/guide/tooltip` | 기본 |
+| TreeView | `TreeView/` | `/guide/tree-view` | 기본 |
 
-> `상태`: `템플릿`(publishTemplate 기본 제공) / `제안`(화면 분석 후 승인 대기) / `승인`(구현 대상)
+> `상태`: `기본`(기본 제공) / `제안`(화면 분석 후 승인 대기) / `승인`(구현 대상)
 
 **공통 훅** (`src/hooks/`, 가이드 `hooks` 섹션): `useHtmlRootClass`, `useHtmlTag`, `useLayoutClass`, `useMediaDevice`, `useNearestScrollableMetrics`, `useRemainingHeight`, `useScrollSpy`
 
@@ -100,7 +100,7 @@ App (ThemeProvider)
 
 ## 5. 인터랙션
 
-- 오버레이·메뉴·탭 등 인터랙션은 템플릿 컴포넌트(Radix 기반)의 동작을 그대로 사용합니다.
+- 오버레이·메뉴·탭 등 인터랙션은 공통 컴포넌트(Radix 기반)의 동작을 그대로 사용합니다.
 - 실제 API가 연결되지 않은 기능은 퍼블리싱용 목업 동작으로 구현합니다.
 - 디버깅용 `console.log`를 남기지 않습니다.
 
